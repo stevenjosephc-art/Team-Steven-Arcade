@@ -923,8 +923,8 @@ function processGameRewards(user, rawScore, gameTitle) {
     let fatigueRes = calculateFatigue(gameTitle, "");
     
     // Write LDAP, Tickets, Unspent, Total, and XP to Columns A through E
-    sheet.getRange(targetRow, 1, 1, 5).setValues([[user, 0, ecoScore, ecoScore, ecoScore]]); // FIXED
-    // Write DailyPlayData directly to Column H (Skips F and G!)
+    sheet.getRange(targetRow, 1, 1, 5).setValues([[user, 0, ecoScore, ecoScore, ecoScore]]);
+    // Write DailyPlayData directly to Column H (Skips F and G to preserve formulas/integrity)
     sheet.getRange(targetRow, 8).setValue(fatigueRes.newData);
 
     return { tickets: 0, unspent: ecoScore, earnedXP: ecoScore, earnedPoints: ecoScore, mult: 1.0, perf: 1.0, fatigue: 1.0 }; // FIXED
@@ -952,10 +952,8 @@ function processGameRewards(user, rawScore, gameTitle) {
     lifetime += earnedPoints;
     xp += earnedXP;
 
-    // ONLY overwrite Columns B, C, D, and E (Tickets, Unspent, Total, XP)
-    sheet.getRange(rowIndex, 2, 1, 4).setValues([[currentTickets, unspent, lifetime, xp]]);
-    // ONLY overwrite Column H (DailyPlayData), leaving F and G untouched!
-    sheet.getRange(rowIndex, 8).setValue(fatigueRes.newData);
+    // Batch update Columns B through H (Tickets, Unspent, Total, XP, CSAT, Attendance, DailyPlayData)
+    sheet.getRange(rowIndex, 2, 1, 7).setValues([[currentTickets, unspent, lifetime, xp, csat, attendance, fatigueRes.newData]]);
 
     return { 
       tickets: currentTickets, unspent: unspent, earnedXP: earnedXP, earnedPoints: earnedPoints, 
@@ -1176,7 +1174,8 @@ function syncPokemonData(pointsSpent, pokemonDataJSON, clientVersion) {
     return { success: false, message: "⚠️ Game updated! Please refresh your browser." };
   }
 
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Wallets");
+  const ss = getSpreadsheet_();
+  var sheet = ss.getSheetByName("Wallets");
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
   // ... (Leave the rest of the function exactly as it is!)
@@ -1209,8 +1208,12 @@ function syncPokemonData(pointsSpent, pokemonDataJSON, clientVersion) {
       var newUnspent = currentUnspent - pointsSpent;
 
       // 2. FIXED: Removed the 'if (pointsSpent > 0)' block so rewards can be saved!
-      sheet.getRange(i + 1, unspentCol + 1).setValue(newUnspent);
-      sheet.getRange(i + 1, pokeCol + 1).setValue(pokemonDataJSON);
+      data[i][unspentCol] = newUnspent;
+      data[i][pokeCol] = pokemonDataJSON;
+
+      let startCol = Math.min(unspentCol, pokeCol);
+      let endCol = Math.max(unspentCol, pokeCol);
+      sheet.getRange(i + 1, startCol + 1, 1, endCol - startCol + 1).setValues([data[i].slice(startCol, endCol + 1)]);
 
       return { success: true, unspent: newUnspent };
     }
@@ -1222,12 +1225,17 @@ function syncPokemonData(pointsSpent, pokemonDataJSON, clientVersion) {
 // POKEMON GTS & AUCTION LOGIC
 // ==========================================
 function getGTSListings() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Marketplace");
+  const ss = getSpreadsheet_();
+  var sheet = ss.getSheetByName("Marketplace");
   if (!sheet) return [];
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
   var listings = [];
   var now = new Date().getTime();
+
+  var walletSheet = ss.getSheetByName("Wallets");
+  var wData = walletSheet.getDataRange().getValues();
+  var wHeaders = wData[0];
 
   for (var i = 1; i < data.length; i++) {
     if (data[i][headers.indexOf('Status')] === 'Active') {
@@ -1235,7 +1243,7 @@ function getGTSListings() {
       
       // AUTO-RESOLVER: If the auction is expired, the server resolves it instantly!
       if (endTime > 0 && now >= endTime) {
-          resolveExpiredAuction(i + 1);
+          resolveExpiredAuction(i + 1, data, headers, wData, wHeaders);
           continue; // Skip adding this expired listing to the active board
       }
 
@@ -1258,7 +1266,8 @@ function getGTSListings() {
 }
 
 function placeGTSBid(rowIdx, bidAmount) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Marketplace");
+  const ss = getSpreadsheet_();
+  var sheet = ss.getSheetByName("Marketplace");
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
   
@@ -1271,7 +1280,7 @@ function placeGTSBid(rowIdx, bidAmount) {
   if (bidAmount <= currentBid) return { success: false, message: "Bid must be higher than current bid!" };
 
   // Check new bidder's wallet
-  var walletSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Wallets");
+  var walletSheet = ss.getSheetByName("Wallets");
   var wData = walletSheet.getDataRange().getValues();
   var wHeaders = wData[0];
   var ldapCol = wHeaders.indexOf('LDAP') > -1 ? wHeaders.indexOf('LDAP') : wHeaders.indexOf('ldap');
@@ -1305,15 +1314,27 @@ function placeGTSBid(rowIdx, bidAmount) {
   // Deduct from the new highest bidder
   walletSheet.getRange(bidderRow, unspentCol + 1).setValue(bidderFunds - bidAmount);
 
-  // Update the Auction Sheet
-  sheet.getRange(rowIdx, headers.indexOf('CurrentBid') + 1).setValue(bidAmount);
-  sheet.getRange(rowIdx, headers.indexOf('HighestBidderLDAP') + 1).setValue(ldap);
+  // Update the Auction Sheet (Batch update CurrentBid and HighestBidderLDAP if contiguous)
+  let cbIdx = headers.indexOf('CurrentBid');
+  let hbIdx = headers.indexOf('HighestBidderLDAP');
+  let row = data[rowIdx - 1];
+  row[cbIdx] = bidAmount;
+  row[hbIdx] = ldap;
+
+  if (Math.abs(cbIdx - hbIdx) === 1) {
+    let startIdx = Math.min(cbIdx, hbIdx);
+    sheet.getRange(rowIdx, startIdx + 1, 1, 2).setValues([[row[startIdx], row[startIdx + 1]]]);
+  } else {
+    sheet.getRange(rowIdx, cbIdx + 1).setValue(bidAmount);
+    sheet.getRange(rowIdx, hbIdx + 1).setValue(ldap);
+  }
 
   return { success: true, message: "Bid placed successfully!" };
 }
 
 function createGTSListing(pokeId, lvl, shiny, startingBid, buyoutPrice, nature) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Marketplace");
+  const ss = getSpreadsheet_();
+  var sheet = ss.getSheetByName("Marketplace");
   if (!sheet) return { success: false, message: "Marketplace sheet not found!" };
 
   var email = Session.getActiveUser().getEmail();
@@ -1332,7 +1353,8 @@ function createGTSListing(pokeId, lvl, shiny, startingBid, buyoutPrice, nature) 
 }
 
 function buyoutGTSListing(rowIdx) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Marketplace");
+  const ss = getSpreadsheet_();
+  var sheet = ss.getSheetByName("Marketplace");
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
 
@@ -1355,7 +1377,7 @@ function buyoutGTSListing(rowIdx) {
   if (seller === ldap) return { success: false, message: "You cannot buy your own listing!" };
 
   // 1. Check buyer funds
-  var walletSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Wallets");
+  var walletSheet = ss.getSheetByName("Wallets");
   var wData = walletSheet.getDataRange().getValues();
   var wHeaders = wData[0];
   var ldapCol = wHeaders.indexOf('LDAP') > -1 ? wHeaders.indexOf('LDAP') : wHeaders.indexOf('ldap');
@@ -1386,10 +1408,26 @@ function buyoutGTSListing(rowIdx) {
   walletSheet.getRange(buyerRow, unspentCol + 1).setValue(buyerFunds - buyoutPrice);
   if (sellerRow !== -1) walletSheet.getRange(sellerRow, unspentCol + 1).setValue(sellerFunds + buyoutPrice);
 
-  // 4. Close the listing
-  sheet.getRange(rowIdx, headers.indexOf('Status') + 1).setValue("Sold");
-  sheet.getRange(rowIdx, headers.indexOf('HighestBidderLDAP') + 1).setValue(ldap);
-  sheet.getRange(rowIdx, headers.indexOf('CurrentBid') + 1).setValue(buyoutPrice);
+  // 4. Close the listing (Batch update CurrentBid, HighestBidderLDAP, and Status if contiguous)
+  let stIdx = headers.indexOf('Status');
+  let hbIdx = headers.indexOf('HighestBidderLDAP');
+  let cbIdx = headers.indexOf('CurrentBid');
+  let row = data[rowIdx - 1];
+  row[stIdx] = "Sold";
+  row[hbIdx] = ldap;
+  row[cbIdx] = buyoutPrice;
+
+  let indices = [stIdx, hbIdx, cbIdx];
+  let minIdx = Math.min(...indices);
+  let maxIdx = Math.max(...indices);
+
+  if (maxIdx - minIdx === 2) {
+    sheet.getRange(rowIdx, minIdx + 1, 1, 3).setValues([row.slice(minIdx, maxIdx + 1)]);
+  } else {
+    sheet.getRange(rowIdx, stIdx + 1).setValue("Sold");
+    sheet.getRange(rowIdx, hbIdx + 1).setValue(ldap);
+    sheet.getRange(rowIdx, cbIdx + 1).setValue(buyoutPrice);
+  }
 
   return { 
     success: true, 
@@ -1407,7 +1445,8 @@ function syncRankedDefense(squadJSON, gymLvl) {
     // Traffic Cop: Make simultaneous saves wait in line for up to 5 seconds
     lock.waitLock(5000); 
     
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Leaderboard");
+    const ss = getSpreadsheet_();
+    var sheet = ss.getSheetByName("Leaderboard");
     if (!sheet) return;
     
     // Force lowercase to ensure perfect matching
@@ -1427,8 +1466,14 @@ function syncRankedDefense(squadJSON, gymLvl) {
     var gymCol = headers.indexOf('GymLevel');
     if(rowIdx > -1) {
        // Update existing player
-       sheet.getRange(rowIdx, headers.indexOf('SquadJSON') + 1).setValue(squadJSON);
-       if(gymCol > -1) sheet.getRange(rowIdx, gymCol + 1).setValue(gymLvl);
+       let row = data[rowIdx - 1];
+       let sqIdx = headers.indexOf('SquadJSON');
+       row[sqIdx] = squadJSON;
+       if(gymCol > -1) row[gymCol] = gymLvl;
+
+       let startIdx = (gymCol > -1) ? Math.min(sqIdx, gymCol) : sqIdx;
+       let endIdx = (gymCol > -1) ? Math.max(sqIdx, gymCol) : sqIdx;
+       sheet.getRange(rowIdx, startIdx + 1, 1, endIdx - startIdx + 1).setValues([row.slice(startIdx, endIdx + 1)]);
     } else {
        // New player: LDAP, MMR, Squad, Wins, Losses, GymLevel
        sheet.appendRow([ldap, 1000, squadJSON, 0, 0, gymLvl]);
@@ -1441,7 +1486,8 @@ function syncRankedDefense(squadJSON, gymLvl) {
 }
 
 function getRankedMatch() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Leaderboard");
+  const ss = getSpreadsheet_();
+  var sheet = ss.getSheetByName("Leaderboard");
   var ldap = Session.getActiveUser().getEmail().split('@')[0];
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
@@ -1466,7 +1512,8 @@ function getRankedMatch() {
 }
 
 function resolveRankedMatch(opponentLdap, isWin) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Leaderboard");
+  const ss = getSpreadsheet_();
+  var sheet = ss.getSheetByName("Leaderboard");
   var ldap = Session.getActiveUser().getEmail().split('@')[0];
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
@@ -1479,24 +1526,38 @@ function resolveRankedMatch(opponentLdap, isWin) {
   
   // Attacker ELO Change
   if (myRow > -1) {
-     var myMmr = Number(sheet.getRange(myRow, headers.indexOf('MMR')+1).getValue());
-     var myWins = Number(sheet.getRange(myRow, headers.indexOf('Wins')+1).getValue());
-     var myLosses = Number(sheet.getRange(myRow, headers.indexOf('Losses')+1).getValue());
+     let row = data[myRow - 1];
+     let mmrIdx = headers.indexOf('MMR');
+     let winsIdx = headers.indexOf('Wins');
+     let lossIdx = headers.indexOf('Losses');
      
-     sheet.getRange(myRow, headers.indexOf('MMR')+1).setValue(Math.max(0, myMmr + (isWin ? 25 : -15)));
-     if(isWin) sheet.getRange(myRow, headers.indexOf('Wins')+1).setValue(myWins + 1);
-     else sheet.getRange(myRow, headers.indexOf('Losses')+1).setValue(myLosses + 1);
+     let myMmr = Number(row[mmrIdx]);
+     let myWins = Number(row[winsIdx]);
+     let myLosses = Number(row[lossIdx]);
+
+     row[mmrIdx] = Math.max(0, myMmr + (isWin ? 25 : -15));
+     if(isWin) row[winsIdx] = myWins + 1;
+     else row[lossIdx] = myLosses + 1;
+
+     // Batch update MMR through Losses
+     let indices = [mmrIdx, winsIdx, lossIdx].filter(i => i > -1);
+     let startIdx = Math.min(...indices);
+     let endIdx = Math.max(...indices);
+     sheet.getRange(myRow, startIdx + 1, 1, endIdx - startIdx + 1).setValues([row.slice(startIdx, endIdx + 1)]);
   }
   
   // Defender ELO Change (Smaller penalties so people don't lose all their rank while sleeping)
   if (opRow > -1) {
-     var opMmr = Number(sheet.getRange(opRow, headers.indexOf('MMR')+1).getValue());
-     sheet.getRange(opRow, headers.indexOf('MMR')+1).setValue(Math.max(0, opMmr + (isWin ? -5 : 10)));
+     let row = data[opRow - 1];
+     let mmrIdx = headers.indexOf('MMR');
+     let opMmr = Number(row[mmrIdx]);
+     sheet.getRange(opRow, mmrIdx + 1).setValue(Math.max(0, opMmr + (isWin ? -5 : 10)));
   }
 }
 
 function getLeaderboard() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Leaderboard");
+  const ss = getSpreadsheet_();
+  var sheet = ss.getSheetByName("Leaderboard");
   if(!sheet) return [];
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
@@ -1514,10 +1575,13 @@ function getLeaderboard() {
   return lb.slice(0, 50); // Return Top 50
 }
 
-function resolveExpiredAuction(rowIdx) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Marketplace");
-  var mData = sheet.getDataRange().getValues();
-  var mHeaders = mData[0];
+function resolveExpiredAuction(rowIdx, mData, mHeaders, wData, wHeaders) {
+  const ss = getSpreadsheet_();
+  var sheet = ss.getSheetByName("Marketplace");
+  if (!mData) {
+    mData = sheet.getDataRange().getValues();
+    mHeaders = mData[0];
+  }
   
   var listing = mData[rowIdx-1];
   var status = listing[mHeaders.indexOf('Status')];
@@ -1534,9 +1598,11 @@ function resolveExpiredAuction(rowIdx) {
   var isShiny = listing[mHeaders.indexOf('IsShiny')] === true || listing[mHeaders.indexOf('IsShiny')] === 'TRUE';
   var nature = listing[mHeaders.indexOf('Nature')] || 'Hardy'; // <--- NEW!
   
-  var walletSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Wallets");
-  var wData = walletSheet.getDataRange().getValues();
-  var wHeaders = wData[0];
+  var walletSheet = ss.getSheetByName("Wallets");
+  if (!wData) {
+    wData = walletSheet.getDataRange().getValues();
+    wHeaders = wData[0];
+  }
   var ldapCol = wHeaders.indexOf('LDAP') > -1 ? wHeaders.indexOf('LDAP') : wHeaders.indexOf('ldap');
   var unspentCol = wHeaders.indexOf('Unspent_Points');
   var pokeCol = wHeaders.indexOf('pokemonData');
@@ -1575,30 +1641,6 @@ function resolveExpiredAuction(rowIdx) {
     }
     sheet.getRange(rowIdx, mHeaders.indexOf('Status')+1).setValue('Sold');
     return { success: true, message: "Auction resolved! Points & Pokemon transferred." };
-  }
-}
-
-function syncRankedDefense(squadJSON, gymLvl) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Leaderboard");
-  if (!sheet) return;
-  var ldap = Session.getActiveUser().getEmail().split('@')[0];
-  var data = sheet.getDataRange().getValues();
-  var headers = data[0];
-  
-  var rowIdx = -1;
-  for(var i = 1; i < data.length; i++) {
-     if(data[i][headers.indexOf('LDAP')] === ldap) { rowIdx = i + 1; break; }
-  }
-  
-  var gymCol = headers.indexOf('GymLevel');
-  
-  if(rowIdx > -1) {
-     sheet.getRange(rowIdx, headers.indexOf('SquadJSON') + 1).setValue(squadJSON);
-     // Save the badge count!
-     if(gymCol > -1) sheet.getRange(rowIdx, gymCol + 1).setValue(gymLvl);
-  } else {
-     // New player: LDAP, MMR, Squad, Wins, Losses, GymLevel
-     sheet.appendRow([ldap, 1000, squadJSON, 0, 0, gymLvl]); 
   }
 }
 
@@ -1669,29 +1711,36 @@ function getArcadeLeaderboard(game, filter) {
 }
 
 function purgeExploiters() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Wallets"); // FIXED: Target Wallets
-  if (!sheet) return;
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    const ss = getSpreadsheet_();
+    var sheet = ss.getSheetByName("Wallets"); // FIXED: Target Wallets
+    if (!sheet) return;
 
-  var data = sheet.getDataRange().getValues();
-  var exploitThreshold = 5000000; // Anyone over 5 million gets reset
+    var data = sheet.getDataRange().getValues();
+    var exploitThreshold = 5000000; // Anyone over 5 million gets reset
 
-  for (var i = 1; i < data.length; i++) { // Skip header row
-    // Column C (Index 2) is Unspent Points, Column D (Index 3) is Lifetime Points
-    var unspentPts = Number(data[i][2]) || 0;
-    var lifetimePts = Number(data[i][3]) || 0;
+    for (var i = 1; i < data.length; i++) { // Skip header row
+      // Column C (Index 2) is Unspent Points, Column D (Index 3) is Lifetime Points
+      var unspentPts = Number(data[i][2]) || 0;
+      var lifetimePts = Number(data[i][3]) || 0;
 
-    if (unspentPts > exploitThreshold || lifetimePts > exploitThreshold) {
-      // Reset Unspent Points (Col C), Lifetime Points (Col D), and XP (Col E) to 0
-      sheet.getRange(i + 1, 3).setValue(0);
-      sheet.getRange(i + 1, 4).setValue(0);
-      sheet.getRange(i + 1, 5).setValue(0);
+      if (unspentPts > exploitThreshold || lifetimePts > exploitThreshold) {
+        // Reset Unspent Points (Col C), Lifetime Points (Col D), and XP (Col E) to 0
+        sheet.getRange(i + 1, 3, 1, 3).setValues([[0, 0, 0]]);
+      }
     }
+  } catch (e) {
+    Logger.log("Purge Error: " + e.toString());
+  } finally {
+    lock.releaseLock();
   }
 }
 
 function getPvPLeaderboard() {
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = getSpreadsheet_();
     var sheet = ss.getSheetByName("Leaderboard");
     var walletSheet = ss.getSheetByName("Wallets");
     if (!sheet || !walletSheet) return [];
@@ -1750,7 +1799,7 @@ function getPvPLeaderboard() {
 }
 
 function adminWipePokemonData() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
   
   // 1. Wipe Pokemon Saves from Wallets (Keep Points/Tickets safe)
   const walletSheet = ss.getSheetByName("Wallets");
@@ -1778,7 +1827,7 @@ function adminWipePokemonData() {
 }
 
 function adminNuclearWipeArcade() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSpreadsheet_();
 
   // 1. WIPE WALLETS (Keep LDAPs and Tickets. Reset Points, XP, and Pokémon Saves)
   const walletSheet = ss.getSheetByName("Wallets");
