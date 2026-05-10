@@ -259,7 +259,11 @@ document.addEventListener('click', () => {
 function updateVolume(val) { 
   masterVolume = val / 100; 
   soundEnabled = (masterVolume > 0);
-  document.getElementById('soundBtn').textContent = soundEnabled ? '🔊' : '🔇';
+  var sBtns = document.querySelectorAll('#soundBtn');
+  sBtns.forEach(sBtn => {
+    sBtn.textContent = soundEnabled ? '🔊' : '🔇';
+    sBtn.setAttribute('aria-label', soundEnabled ? 'Mute sound' : 'Unmute sound');
+  });
   
   ['bgmLobby', 'bgmCasino', 'bgmGame'].forEach(id => {
     let audio = document.getElementById(id);
@@ -271,7 +275,11 @@ function updateVolume(val) {
 
 function toggleSound() {
   soundEnabled = !soundEnabled;
-  document.getElementById('soundBtn').textContent = soundEnabled ? '🔊' : '🔇'; 
+  var sBtns = document.querySelectorAll('#soundBtn');
+  sBtns.forEach(sBtn => {
+    sBtn.textContent = soundEnabled ? '🔊' : '🔇';
+    sBtn.setAttribute('aria-label', soundEnabled ? 'Mute sound' : 'Unmute sound');
+  });
   if(soundEnabled && masterVolume === 0){
     masterVolume = 1; 
     document.getElementById('volSlider').value = 100;
@@ -455,6 +463,12 @@ var konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', '
 var konamiPos = 0;
 
 window.addEventListener('keydown', e => {
+  // --- QoL: KEYBOARD ACCESSIBILITY FOR ROLE="BUTTON" ---
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute('role') === 'button') {
+      e.preventDefault();
+      e.target.click();
+  }
+
   // --- QoL: UNIVERSAL HOTKEYS ---
   if (e.key === 'Escape') {
       closeModal('settingsModal'); closeModal('feedbackModal'); closeModal('adminModal'); 
