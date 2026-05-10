@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <?!= include('Stylesheet'); ?>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>Google Play Arcade</title>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  
+</head>
+<body>
+  <div class="ticker-wrap" id="globalTickerWrap">
+  <div class="ticker-content" id="jackpotTickerText">
+    🎰 WELCOME TO THE GRAND CASINO &nbsp;&nbsp; | &nbsp;&nbsp; 💎 LIVE PROGRESSIVE JACKPOT: <span class="ticker-amount">CONNECTING...</span> PTS &nbsp;&nbsp; | &nbsp;&nbsp; MATCH THREE DIAMONDS TO WIN THE POOL 💎
+  </div>
+</div>
+
+<header>
+  <div class="logo-area" onclick="showTab('storeFront','tab-all')">
+    <svg width="32" height="32" viewBox="0 0 1024 1024" style="flex-shrink: 0; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+      <path fill="#34A853" d="M136.5,887.6C126.8,877,122,860.5,122,840.1V183.9c0-20.4,4.8-36.9,14.5-47.5l456,456L136.5,887.6z"/>
+      <path fill="#FBBC04" d="M759,625.6l-166.5-166.5L592.5,459L759,292.4l156.4,88.9c48.2,27.4,48.2,72.4,0,99.8L759,625.6z"/>
+      <path fill="#EA4335" d="M136.5,136.4L592.5,459l166.5-166.6L196.4,29.1C171,14.6,149.2,23.7,136.5,136.4z"/>
+      <path fill="#4285F4" d="M136.5,887.6c12.7,112.7,34.5,121.8,59.9,107.3l562.6-263.3L592.5,565L136.5,887.6z"/>
+    </svg>
+    Google Play Store
+  </div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="search-bar" id="searchInput" placeholder="Search games & apps" oninput="handleSearch(this.value)">
+    <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
+  </div>
+  <div class="header-actions">
+    
+    <div class="wallet-chip" style="display: flex; gap: 8px; align-items: center; padding: 4px 12px; background: transparent; border: none; cursor: pointer;" onclick="showTab('storePage','tab-store')" title="Open Store">
+      
+      <div style="display: flex; flex-direction: column; align-items: center;">
+          <div style="background: #E8F0FE; color: #1A73E8; padding: 0 12px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid #D2E3FC; font-family: 'Google Sans'; white-space: nowrap;">
+            <span id="uiPoints">0</span>&nbsp;Pts
+          </div>
+          <div style="width: 85%; background: rgba(0,0,0,0.1); height: 4px; border-radius: 4px; margin-top: 4px; overflow: hidden; border: 1px solid rgba(0,0,0,0.05);" title="Progress to next Arcade Ticket">
+              <div id="uiTicketFill" style="height: 100%; width: 0%; background: linear-gradient(90deg, #FFD700, #FBC02D); transition: width 0.5s ease-out;"></div>
+          </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; align-items: center;">
+          <div style="background: #FCE8E6; color: #EA4335; padding: 0 12px; height: 32px; display: flex; align-items: center; justify-content: center; gap: 4px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid #FAD2CF; font-family: 'Google Sans'; white-space: nowrap; flex-shrink: 0;">
+            <span id="uiTickets">0</span> 🎟️
+            <span id="globalTicketCount" style="display:none;">0</span>
+          </div>
+          <div style="height: 4px; margin-top: 4px;"></div>
+      </div>
+      
+    </div>
+
+    <div class="level-badge" title="Player Level">
+      <div class="level-ring"><span id="uiLevel">1</span></div>
+      <div class="exp-bar-bg"><div class="exp-bar-fill" id="uiExpFill"></div></div>
+      <span id="uiPerfBadge" style="display:none; font-size:12px; font-weight:900; color:#FF9500; margin-left:4px;">🔥 1.0x</span>
+    </div>
+
+    <button class="icon-btn" id="soundBtn" onclick="toggleSound()" title="Toggle Sound">🔊</button>
+    <button class="icon-btn" onclick="openSettings()" title="Settings">⚙️</button>
+    <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">🌓</button>
+    <button class="icon-btn" onclick="openModal('feedbackModal')" title="Feedback">💬</button>
+    <button class="icon-btn" id="adminBtn" onclick="openModal('adminModal')" title="Admin Console" style="display:none; color:#EA4335;">🛡️</button>
+    <div class="avatar" id="userAvatar" onclick="openProfile()" title="Your profile">?</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab-indicator" id="tabIndicator"></div> <div class="tab active" id="tab-all" onclick="filterCategory('All',this)">For you</div>
+  <div class="tab" id="tab-arcade" onclick="filterCategory('Arcade',this)">Arcade Action</div>
+  <div class="tab" id="tab-puzzle" onclick="filterCategory('Puzzle',this)">Brain &amp; Logic</div>
+  <div class="tab" id="tab-card" onclick="filterCategory('Card',this)">Card Games</div>
+  <div class="tab" id="tab-hof" onclick="showTab('hallOfFame','tab-hof'); loadHallOfFame();">Hall of Fame</div>
+  <div class="tab" id="tab-charts" onclick="showTab('topCharts','tab-charts')">Top Charts</div>
+  <div class="tab" id="tab-store" onclick="showTab('storePage','tab-store');">Rewards Store</div>
+  <div class="tab" id="tab-casino" onclick="showTab('casinoPage','tab-casino');" style="color: #E94560; font-weight: 700;">🎰 Vegas Casino</div>
+</div>
+
+<div id="storeFront" class="container active">
+  <div class="carousel-container" id="hive-carousel">
+    <div class="carousel-wrapper" id="carousel-wrapper"></div>
+    
+    <button class="carousel-btn prev-btn" onclick="prevCarouselSlide()">&#10094;</button>
+    <button class="carousel-btn next-btn" onclick="nextCarouselSlide()">&#10095;</button>
+  </div>
+
+  <div class="bounty-card" id="bountyCard">
+  </div>
+
+  <div class="category-section" id="secFeatured"><div class="section-header"><div class="category-title">🔥 Featured</div></div><div class="featured-row" id="rowFeatured"></div></div>
+  <div class="category-section" id="secRecommended"><div class="section-header"><div class="category-title" id="recTitle">Recommended for you</div></div><div class="category-row" id="rowRecommended"></div></div>
+  <div class="category-section" id="secArcade"><div class="section-header"><div class="category-title">🕹️ Arcade Action</div></div><div class="category-row" id="rowArcade"></div></div>
+  <div class="category-section" id="secBrain"><div class="section-header"><div class="category-title">🧠 Brain Games</div></div><div class="category-row" id="rowBrain"></div></div>
+  <div class="category-section" id="secCard"><div class="section-header"><div class="category-title">🃏 Card &amp; Word</div></div><div class="category-row" id="rowCard"></div></div>
+  <div class="empty-state" id="emptySearch"><div class="empty-state-emoji">🕹️</div><h3>No games found</h3><p>Try a different search term</p></div>
+</div>
+
+<div id="hallOfFame" class="container">
+  <div class="lb-controls">
+    <h2 class="lb-title">👑 Hall of Fame</h2>
+    <div class="lb-filters">
+      <div class="filter-chip active" id="btnHofXp" onclick="loadHallOfFame('xp')">🌟 Prestige (XP)</div>
+      <div class="filter-chip" id="btnHofWealth" onclick="loadHallOfFame('wealth')">💰 Wealth (Unspent Pts)</div>
+      <div class="filter-chip" id="btnHofTeam" onclick="loadHallOfFame('team')">🛡️ Top Squads</div>
+    </div>
+  </div>
+  <div class="hof-arena" id="hofArena">
+     <div class="hof-ambient" id="hofAmbient"></div>
+     <button id="flexBtn" class="flex-btn">Show Off 🏆</button>
+     <div id="podiumContent" style="width: 100%;"></div>
+  </div>
+  <div id="hofListContent"></div>
+</div>
+
+<div id="topCharts" class="container">
+  <div class="lb-controls">
+    <h2 class="lb-title">🏆 Top Charts</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <select class="game-select" id="lbSelect" onchange="loadLeaderboard()"></select>
+      <div class="lb-filters">
+        <div class="filter-chip active" onclick="setLbFilter('all',this)">All Time</div>
+        <div class="filter-chip" onclick="setLbFilter('week',this)">This Week</div>
+        <div class="filter-chip" onclick="setLbFilter('Easy',this)">Casual</div>
+        <div class="filter-chip" onclick="setLbFilter('Medium',this)">Standard</div>
+        <div class="filter-chip" onclick="setLbFilter('Hard',this)">Hardcore</div>
+      </div>
+    </div>
+  </div>
+  <div class="lb-card" id="leaderboardList"><div class="lb-row"><span style="color:var(--text-muted);font-size:14px;">Loading charts…</span></div></div>
+</div>
+
+<div id="storePage" class="container">
+  <div class="lb-controls" style="margin-bottom:12px;">
+    <h2 class="lb-title">🎟️ Rewards Store</h2>
+  </div>
+  <div style="margin-bottom: 24px; font-size:14px; color:var(--text-muted);">
+    Exchange your hard-earned Arcade Tickets for real-world perks. (Exchange rate: 500k points = 1 Ticket)<br><br>
+    <span style="font-size: 12px; color: var(--text-hint); background: var(--surface-2); padding: 6px 10px; border-radius: 8px;">ℹ️ Rewards are for decorative purposes only. Please don't take it seriously.</span>
+  </div>
+  <div class="store-grid">
+
+    <div class="perk-card" style="border: 2px solid var(--g-blue); box-shadow: 0 4px 15px rgba(66,165,245,0.2);">
+          <div class="perk-banner" style="background: linear-gradient(135deg, #1A73E8, #42A5F5); display: flex; align-items: center; justify-content: center; font-size: 54px;">🎟️</div>
+          <div class="perk-info">
+            <div class="perk-title" style="color: var(--g-blue); text-transform: uppercase; letter-spacing: 1px;">Mint 1x Ticket</div>
+            <div class="perk-desc">Convert your hard-earned points into a Golden Ticket to spend on real-world perks.</div>
+            <button class="perk-buy" style="background: #E8F0FE; color: #1A73E8; font-weight: bold; border: 1px solid #42A5F5;" onclick="convertPointsToTicket()">
+              <span>Convert</span> <span>500,000 Pts</span>
+            </button>
+          </div>
+        </div>
+        
+        <div class="perk-card">
+          <div class="perk-banner" style="background-image: url('https://dynamic.brandcrowd.com/template/preview/design/3e79902b-1524-4052-ae63-ee8bc86009a9?v=4&designTemplateVersion=1&size=design-preview-standalone-1x'); background-size: cover; background-position: center; border-bottom: 1px solid #30363d;"></div>
+          <div class="perk-info">
+            <div class="perk-title">1-week Work at Home Pass (Approved)</div>
+            <div class="perk-desc">The ultimate prize. Skip the commute and work from the comfort of your home for an entire week.</div>
+            <button class="perk-buy" onclick="buyItem('1-week WFH Pass', 9999)"><span>Buy Perk</span> <span>9,999 🎟️</span></button>
+          </div>
+        </div>
+
+        <div class="perk-card">
+          <div class="perk-banner" style="background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTX32dD8banyjQ9p9wkIq-VLtws6d7G-2UGVA&s'); background-size: cover; background-position: center; border-bottom: 1px solid #30363d;"></div>
+          <div class="perk-info">
+            <div class="perk-title">1pc Chicken Meal w/o Drinks</div>
+            <div class="perk-desc">Chickenjoy with rice. You've earned a real meal today.</div>
+            <button class="perk-buy" onclick="buyItem('1pc Chicken Meal', 115)"><span>Buy Perk</span> <span>115 🎟️</span></button>
+          </div>
+        </div>
+
+        <div class="perk-card">
+          <div class="perk-banner" style="background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTtkfpsFnXL-v7WocNTY66fns1FG6tu7IFFew&s'); background-size: cover; background-position: center; border-bottom: 1px solid #30363d;"></div>
+          <div class="perk-info">
+            <div class="perk-title">Coaching Pahuway</div>
+            <div class="perk-desc">Take a breather. Relax and reset during your coaching session.</div>
+            <button class="perk-buy" onclick="buyItem('Coaching Pahuway', 79)"><span>Buy Perk</span> <span>79 🎟️</span></button>
+          </div>
+        </div>
+
+        <div class="perk-card">
+          <div class="perk-banner" style="background-image: url('https://www.rankthemag.ph/wp-content/uploads/2023/02/image003.jpg'); background-size: cover; background-position: center; border-bottom: 1px solid #30363d;"></div>
+          <div class="perk-info">
+            <div class="perk-title">YumBurger</div>
+            <div class="perk-desc">The classic. A solid morale booster for your lunch break.</div>
+            <button class="perk-buy" onclick="buyItem('YumBurger', 68)"><span>Buy Perk</span> <span>68 🎟️</span></button>
+          </div>
+        </div>
+
+        <div class="perk-card">
+          <div class="perk-banner" style="background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSZ3CgWPUJ1pcrTDJX5sgMKnews8xWWNYlYdw&s'); background-size: cover; background-position: center; border-bottom: 1px solid #30363d;"></div>
+          <div class="perk-info">
+            <div class="perk-title">Coke Float</div>
+            <div class="perk-desc">The perfect mix of caffeine and ice cream to keep you awake.</div>
+            <button class="perk-buy" onclick="buyItem('Coke Float', 56)"><span>Buy Perk</span> <span>56 🎟️</span></button>
+          </div>
+        </div>
+
+        <div class="perk-card">
+          <div class="perk-banner" style="background-image: url('https://www.gardenia.net/wp-content/uploads/2023/05/types-of-flowers-780x520.webp'); background-size: cover; background-position: center; border-bottom: 1px solid #30363d;"></div>
+          <div class="perk-info">
+            <div class="perk-title">Flowers</div>
+            <div class="perk-desc">A beautiful bouquet to brighten up your desk or give to someone special.</div>
+            <button class="perk-buy" onclick="buyItem('Flowers', 50)"><span>Buy Perk</span> <span>50 🎟️</span></button>
+          </div>
+        </div>
+
+        <div class="perk-card">
+          <div class="perk-banner" style="background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBKO2ziORgL2uElYBfYUXncCc_TXvXjJqmjA&s'); background-size: cover; background-position: center; border-bottom: 1px solid #30363d;"></div>
+          <div class="perk-info">
+            <div class="perk-title">Regular Fries</div>
+            <div class="perk-desc">Salty, crispy, and perfect for snacking between tickets.</div>
+            <button class="perk-buy" onclick="buyItem('Regular Fries', 45)"><span>Buy Perk</span> <span>45 🎟️</span></button>
+          </div>
+        </div>
+
+        <div class="perk-card">
+          <div class="perk-banner" style="background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShRvNIYFeJFuTVLYY3o4-S5_cCnRbGxBFJmg&s'); background-size: cover; background-position: center; border-bottom: 1px solid #30363d;"></div>
+          <div class="perk-info">
+            <div class="perk-title">Cobra + Winston/Iceblast</div>
+            <div class="perk-desc">The ultimate graveyard shift survival pack. Pure energy and stress relief.</div>
+            <button class="perk-buy" onclick="buyItem('Cobra + Winston', 40)"><span>Buy Perk</span> <span>40 🎟️</span></button>
+          </div>
+        </div>
+
+        <div class="perk-card">
+          <div class="perk-banner" style="background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLY1wZ4sIPtA7YEkawUIP4PhADQbKbl2XDBQ&s'); background-size: cover; background-position: center; border-bottom: 1px solid #30363d;"></div>
+          <div class="perk-info">
+            <div class="perk-title">Sundae</div>
+            <div class="perk-desc">Cool down after dealing with a red-alert escalation.</div>
+            <button class="perk-buy" onclick="buyItem('Sundae', 35)"><span>Buy Perk</span> <span>35 🎟️</span></button>
+          </div>
+        </div>
+
+        <div class="perk-card">
+          <div class="perk-banner" style="background-image: url('https://www.rebisco.com.ph/1427-thickbox_default/choco-mucho-choco.jpg'); background-size: cover; background-position: center; border-bottom: 1px solid #30363d;"></div>
+          <div class="perk-info">
+            <div class="perk-title">Choco Mucho</div>
+            <div class="perk-desc">A quick sugar rush to get you through the next hour of calls.</div>
+            <button class="perk-buy" onclick="buyItem('Choco Mucho', 20)"><span>Buy Perk</span> <span>20 🎟️</span></button>
+          </div>
+        </div>
+
+        <div class="perk-card" style="border: 1px solid #D4AF37; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);">
+          <div class="perk-banner" style="background-image: url('https://static.vecteezy.com/system/resources/previews/005/739/421/non_2x/luxury-gold-vip-card-and-elegant-black-background-luxury-design-for-vip-members-vector.jpg'); background-size: cover; background-position: center; border-bottom: 1px solid #30363d;"></div>
+          <div class="perk-info">
+            <div class="perk-title" style="color: #D4AF37; text-transform: uppercase; letter-spacing: 1px;">VVIP Black Card</div>
+            <div class="perk-desc">Permanently unlock the exclusive Obsidian & Gold VVIP theme for the entire arcade.</div>
+            <button class="perk-buy" style="background: linear-gradient(135deg, #BF953F, #AA771C); color: #000; font-weight: bold; border: none;" onclick="buyVVIPTheme()"><span>Unlock</span> <span>10 🎟️</span></button>
+          </div>
+        </div>
+
+        <div class="perk-card">
+          <div class="perk-banner" style="background-image: url('https://www.animationmagazine.net/wordpress/wp-content/uploads/MyGiftLVL9999_kv.jpg'); background-size: cover; background-position: center; border-bottom: 1px solid #30363d;"></div>
+          <div class="perk-info">
+            <div class="perk-title">Mystery Gacha</div>
+            <div class="perk-desc">Feeling lucky? Open for a chance at huge point refunds, exclusive themes, or real-world jackpots!</div>
+            <button class="perk-buy" style="background:var(--g-blue); color:#fff;" onclick="openMysteryCrate()"><span>Open Crate</span> <span>4 🎟️</span></button>
+          </div>
+        </div>
+
+      </div>
+</div>
+
+<div id="casinoPage" class="container" style="background: radial-gradient(ellipse at 50% 0%, #2a2416 0%, #050505 100%); border: 1px solid #3a2e15; border-radius: 24px; padding: 40px; margin-top: 20px; margin-bottom: 40px; box-shadow: 0 25px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; overflow: hidden;">
+  
+  <div style="position: absolute; inset: 0; background: url('data:image/svg+xml;utf8,<svg width=%2260%22 height=%2260%22 xmlns=%22http://www.w3.org/2000/svg%22><path d=%22M30 0L60 30L30 60L0 30Z%22 fill=%22none%22 stroke=%22%23D4AF37%22 stroke-width=%220.5%22 stroke-opacity=%220.03%22/></svg>'); z-index: 0;"></div>
+
+  <div class="lb-controls" style="margin-bottom:16px; position: relative; z-index: 1;">
+    <h2 class="lb-title" style="font-family: 'Google Sans Display', sans-serif; letter-spacing: -0.5px;">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 6px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+      <span style="background: linear-gradient(to right, #FBF5B7, #BF953F, #AA771C); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 2px 10px rgba(212,175,55,0.2);">The Grand Casino</span>
+    </h2>
+  </div>
+  
+  <div style="margin-bottom: 36px; font-size:15px; color:#A0AAB2; position: relative; z-index: 1; max-width: 600px; line-height: 1.6;">
+    Bet your unspent points. Double your risk, half your reward. The House always wins. Event ends April 30th!
+  </div>
+  
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; position: relative; z-index: 1;">
+
+    <div style="background: radial-gradient(circle at top, #1c1912 0%, #0a0a0a 100%); border: 1px solid #3a2e15; border-radius: 16px; padding: 30px 24px; color: white; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; overflow: hidden;">
+      <div style="position: absolute; top: -20px; right: -20px; opacity: 0.05;">
+        <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1"><rect x="4" y="3" width="16" height="18" rx="2" ry="2"></rect><path d="M8 7h8M8 12h8M8 17h8"></path></svg>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2" ry="2"></rect><path d="M8 7h8M8 12h8M8 17h8"></path><path d="M20 8h2v5h-2"></path></svg>
+      </div>
+      <h3 class="vip-title">High-Roller Slots</h3>
+      <p style="font-size: 13px; color: #94A3B8; margin-bottom: 24px; height: 36px; line-height: 1.5;">Match 3 to win big. Low odds, massive payouts.</p>
+      <button onclick="openAppSheet('High-Roller Slots')" class="vip-btn">Enter Slots</button>
+    </div>
+
+    <div style="background: radial-gradient(circle at top, #1c1912 0%, #0a0a0a 100%); border: 1px solid #3a2e15; border-radius: 16px; padding: 30px 24px; color: white; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; overflow: hidden;">
+      <div style="position: absolute; top: -20px; right: -20px; opacity: 0.05;">
+        <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1"><rect x="4" y="4" width="12" height="16" rx="2" ry="2" transform="rotate(-10 10 12)"></rect><rect x="10" y="4" width="12" height="16" rx="2" ry="2" transform="rotate(10 16 12)"></rect></svg>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="12" height="16" rx="2" ry="2" transform="rotate(-10 10 12)"></rect><rect x="10" y="4" width="12" height="16" rx="2" ry="2" transform="rotate(10 16 12)"></rect></svg>
+      </div>
+      <h3 class="vip-title">Imperial 21</h3>
+      <p style="font-size: 13px; color: #94A3B8; margin-bottom: 24px; height: 36px; line-height: 1.5;">Dealer stands on 17. Instant resolve.</p>
+      <button onclick="openAppSheet('Auto-Blackjack')" class="vip-btn">Enter Tables</button>
+    </div>
+
+    <div style="background: radial-gradient(circle at top, #1c1912 0%, #0a0a0a 100%); border: 1px solid #3a2e15; border-radius: 16px; padding: 30px 24px; color: white; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; overflow: hidden;">
+      <div style="position: absolute; top: -20px; right: -20px; opacity: 0.05;">
+        <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line></svg>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line></svg>
+      </div>
+      <h3 class="vip-title">Monaco Baccarat</h3>
+      <p style="font-size: 13px; color: #94A3B8; margin-bottom: 24px; height: 36px; line-height: 1.5;">High stakes coin flip. Squeeze the cards.</p>
+      <button onclick="openAppSheet('Rigged Baccarat')" class="vip-btn">Enter VIP Room</button>
+    </div>
+
+    <div style="background: radial-gradient(circle at top, #1c1912 0%, #0a0a0a 100%); border: 1px solid #3a2e15; border-radius: 16px; padding: 30px 24px; color: white; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; overflow: hidden;">
+      <div style="position: absolute; top: -20px; right: -20px; opacity: 0.05;">
+        <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+      </div>
+      <h3 class="vip-title">Royal Ascot Derby</h3>
+      <p style="font-size: 13px; color: #94A3B8; margin-bottom: 24px; height: 36px; line-height: 1.5;">Pick your pixel horse. Watch them run.</p>
+      <button onclick="openAppSheet('Derby Racing')" class="vip-btn">Enter the Track</button>
+</div>
+
+  </div>
+
+  <div style="margin-top: 40px; background: linear-gradient(180deg, #18150e 0%, #050505 100%); border: 1px solid #3a2e15; border-radius: 16px; padding: 40px 24px; text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; overflow: hidden;">
+    
+    <div style="position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(212,175,55,0.05), transparent); transform: skewX(-20deg); animation: sweepShine 6s infinite; pointer-events: none;"></div>
+    
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 12px; filter: drop-shadow(0 0 10px rgba(212,175,55,0.4));"><path d="M6 3h12l4 6-10 12L2 9z"></path></svg>
+    
+    <div style="font-family: 'Google Sans', sans-serif; font-size: 13px; font-weight: 700; color: #D4AF37; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 4px;">Grand Progressive Jackpot</div>
+    
+    <div style="font-family: 'Google Sans Display', sans-serif; font-size: 56px; font-weight: 700; background: linear-gradient(to bottom, #FFFDE4, #D4AF37, #AA771C); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px; letter-spacing: -1px; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3)); line-height: 1.1;">
+      <span id="vipFloorJackpot">567,400</span> <span style="font-size: 20px; font-weight: 600; -webkit-text-fill-color: #D4AF37; vertical-align: middle;">PTS</span>
+    </div>
+    
+    <div style="font-size: 14px; color: #94A3B8; max-width: 480px; margin: 0 auto; line-height: 1.6;">
+      Every wager on the VIP floor feeds the pool. Hit the ultimate payout in High-Roller Slots to claim the entire vault.
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="appSheetOverlay" onclick="if(event.target===this)closeModal('appSheetOverlay')">
+  <div class="bottom-sheet">
+    <div class="sheet-handle"></div>
+    <div class="bs-app-info">
+      <div class="bs-icon" id="bsIcon"></div>
+      <div class="bs-meta">
+        <h3 id="bsTitle">Game</h3><div class="bs-dev">stevenjosephc</div>
+        <div class="bs-stats"><div class="bs-stat"><div class="bs-stat-val">4.9 ★</div><div class="bs-stat-lbl">Rating</div></div><div class="bs-stat"><div class="bs-stat-val">E</div><div class="bs-stat-lbl">Everyone</div></div><div class="bs-stat"><div class="bs-stat-val" id="bsCategory">Arcade</div><div class="bs-stat-lbl">Category</div></div></div>
+      </div>
+    </div>
+    <div class="how-to-play" id="howToPlay"><div class="how-to-title">How to play</div><div class="how-to-text" id="howToText">Loading…</div></div>
+    <div class="diff-section-title">Select difficulty</div>
+    
+    <button class="diff-btn" id="btnDiffEasy" onclick="launchGame('Easy',1)"><div class="diff-meta"><div class="diff-name">🟢 Casual</div><div class="diff-desc">Relaxed pace, great for learning</div><div class="diff-pb" id="pbEasy"></div></div><div class="diff-mult">1.0× Score</div></button>
+    <button class="diff-btn" id="btnDiffMedium" onclick="launchGame('Medium',1.5)"><div class="diff-meta"><div class="diff-name">🟡 Standard</div><div class="diff-desc">Balanced challenge for most players</div><div class="diff-pb" id="pbMedium"></div></div><div class="diff-mult">1.5× Score</div></button>
+    <button class="diff-btn" id="btnDiffHard" onclick="launchGame('Hard',2)"><div class="diff-meta"><div class="diff-name">🔴 Hardcore</div><div class="diff-desc">Maximum difficulty, maximum glory</div><div class="diff-pb" id="pbHard"></div></div><div class="diff-mult">2.0× Score</div></button>
+    <button class="diff-btn" id="btnDiffFreestyle" onclick="launchGame('Freestyle',2.5)" style="display:none; border-color:#9C27B0;"><div class="diff-meta"><div class="diff-name" style="color:#9C27B0;">🟣 Freestyle</div><div class="diff-desc">Wildcard: 21 words, lengths 4 to 16!</div><div class="diff-pb" id="pbFreestyle"></div></div><div class="diff-mult" style="color:#9C27B0;">2.5× Score</div></button>
+    <p style="font-size:11px; color:var(--text-hint); text-align:center; margin-top:8px; padding: 0 8px;">
+      Scores are server-validated. Unusually fast completions or ceiling-exceeding scores are flagged automatically.
+    </p>
+  </div>
+</div>
+
+<div class="modal-center" id="hofVIPModal">
+  <div class="modal-card" style="background: linear-gradient(135deg, #1a1a2e, #0f0f1a); border: 2px solid #FFD700; box-shadow: 0 0 50px rgba(255,215,0,0.3);">
+    <div id="vipIcon" style="font-size: 60px; margin-bottom: 10px; filter: drop-shadow(0 0 15px rgba(255,215,0,0.8));">👑</div>
+    <h3 id="vipTitle" class="modal-title" style="color: #FFD700; font-size: 26px; text-transform: uppercase; letter-spacing: 1px;">Hail to the King</h3>
+    <p id="vipMessage" style="color: #ccc; font-size: 15px; line-height: 1.6; margin-bottom: 24px; padding: 0 10px;"></p>
+    <button class="btn-primary" style="background: linear-gradient(135deg, #FFD700, #F57F17); color: #000; font-weight: 700; box-shadow: 0 4px 15px rgba(255,215,0,0.5);" onclick="closeModal('hofVIPModal')">Accept the Glory</button>
+  </div>
+</div>
+
+<div class="modal-center" id="feedbackModal">
+  <div class="modal-card">
+    <h3 class="modal-title">💬 Send Feedback</h3>
+    <select id="fbType" class="fb-select"><option value="Bug Report">🐛 Bug Report</option><option value="Feature Request">✨ Feature Request</option><option value="Game Request">🎮 Game Request</option><option value="Other">💬 Other</option></select>
+    <textarea id="fbText" class="fb-textarea" placeholder="Describe the issue or your idea…" maxlength="2000" oninput="document.getElementById('fbCharCount').textContent=this.value.length"></textarea>
+    <div style="text-align:right;font-size:11px;color:var(--text-hint);margin-top:-6px;margin-bottom:8px;"><span id="fbCharCount">0</span>/2000</div>
+    <button class="btn-primary" onclick="submitFeedback()" id="fbBtn">Submit Feedback</button>
+    <button class="btn-ghost" onclick="closeModal('feedbackModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-center" id="workReminderModal">
+  <div class="modal-card" style="border-top: 6px solid #EA4335; box-shadow: 0 10px 40px rgba(234, 67, 53, 0.2);">
+    <div style="font-size: 54px; margin-bottom: 12px; filter: drop-shadow(0 4px 6px rgba(234, 67, 53, 0.4));">🚨</div>
+    <h3 class="modal-title" style="color: #EA4335;">Work Prioritization</h3>
+    <p style="color: var(--text-main); font-size: 15px; line-height: 1.6; margin-bottom: 24px; padding: 0 10px;">
+      Please make sure you are working! Don't go on invalid Busy Aux.<br><br>
+      <strong style="color: #EA4335; font-size: 17px;">Always prioritize your Cases!</strong>
+    </p>
+    <button class="btn-primary" style="background: #EA4335;" onclick="closeModal('workReminderModal')">I Understand</button>
+  </div>
+</div>
+
+<div class="modal-center" id="settingsModal">
+  <div class="modal-card">
+    <h3 class="modal-title">⚙️ Arcade Settings</h3>
+    <div style="text-align: left; margin-bottom: 20px; padding: 0 10px;">
+      
+      <div class="settings-row" style="margin-bottom: 16px; display: block;">
+        <div style="margin-bottom: 6px; font-weight: bold; color: var(--play-green); font-size: 13px; text-transform: uppercase;">🛡️ Squad / Team Name</div>
+        <input type="text" id="setTeam" class="search-bar" placeholder="e.g. Nightshift Ninjas" style="width: 100%; border: 1px solid var(--border);" maxlength="25">
+      </div>
+
+      <div class="settings-row" style="margin-bottom: 24px; display: block;">
+        <div style="margin-bottom: 6px; font-weight: bold; color: var(--play-green); font-size: 13px; text-transform: uppercase;">🏷️ Clan Tag (Max 4 letters)</div>
+        <input type="text" id="setTag" class="search-bar" placeholder="e.g. PRO" style="width: 100%; border: 1px solid var(--border); text-transform: uppercase;" maxlength="4">
+      </div>
+
+      <div class="settings-row" style="margin-bottom: 24px;">
+        <span>🎨 Arcade Theme</span>
+        <select id="themeSelect" class="game-select" onchange="setTheme(this.value)" style="width: 55%;">
+          <option value="light">▶️ Play Store (Default)</option>
+          <option value="candy" id="optCandy">🍬 Candy Pop</option>
+          <option value="dark" id="optDark" disabled>🌙 Dark Mode</option>
+          <option value="kawaii" id="optKawaii" disabled>🌸 Kawaii Pastel</option>
+          <option value="neon" id="optNeon" disabled>⚡ Cyber Neon</option>
+          <option value="hacker" id="optHacker" disabled>🟢 Matrix</option>
+          <option value="retro_crt" id="optRetro" disabled>📺 Retro CRT</option>
+          <option value="vvip" id="optVvip" disabled>👑 VVIP Gold</option>
+        </select>
+      </div>
+
+      <div class="settings-row">
+        <span>🔊 Master Volume</span>
+        <input type="range" class="settings-slider" id="volSlider" min="0" max="100" value="100" onchange="updateVolume(this.value)">
+      </div>
+      <div class="settings-row">
+        <span>✨ Particle Effects</span>
+        <input type="checkbox" id="particleToggle" checked onchange="toggleParticles(this.checked)" style="transform: scale(1.2); accent-color: var(--play-green);">
+      </div>
+
+    </div>
+    <button class="btn-primary" id="btnSaveSettings" onclick="saveSettings()">Save Changes</button>
+    <button class="btn-ghost" onclick="closeModal('settingsModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="modal-center" id="adminModal">
+  <div class="modal-card" style="border: 2px solid #EA4335; box-shadow: 0 0 30px rgba(234, 67, 53, 0.3);">
+    <h3 class="modal-title" style="color: #EA4335;">🛡️ Admin God Mode</h3>
+    <div style="text-align: left; margin-bottom: 16px;">
+       <input type="text" id="adminTarget" class="search-bar" placeholder="Target LDAP (e.g. jdoe)" style="margin-bottom:12px; width:100%; border: 1px solid var(--border);">
+       
+       <select id="adminAction" class="game-select" style="width:100%; margin-bottom:12px;" onchange="document.getElementById('adminAmount').style.display = this.value === 'unban' ? 'none' : 'block'">
+          <option value="give_pts">Inject Points & XP</option>
+          <option value="give_tkt">Grant Tickets</option>
+          <option value="unban">Pardon Shadowban</option>
+       </select>
+       
+       <input type="number" id="adminAmount" class="search-bar" placeholder="Amount (e.g. 50000)" style="width:100%; border: 1px solid var(--border);">
+    </div>
+    <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Warning: Actions are live and irreversible.</p>
+    <button class="btn-primary" style="background: #EA4335;" id="adminSubmitBtn" onclick="submitAdminAction()">Execute Command</button>
+    <button class="btn-ghost" onclick="closeModal('adminModal')">Close</button>
+  </div>
+</div>
+
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeProfile()"></div>
+<div class="profile-drawer" id="profileDrawer">
+  <div class="drawer-header">
+    <div class="drawer-avatar" id="drawerAvatar">?</div>
+    <div class="drawer-user"><h3 id="drawerName">Loading…</h3><p id="drawerEmail"></p></div>
+    <button class="drawer-close" onclick="closeProfile()">✕</button>
+  </div>
+  <div id="drawerContent"><div style="padding:40px;text-align:center;color:var(--text-muted);font-size:14px;">Loading your stats…</div></div>
+</div>
+
+<div id="toastContainer"></div>
+
+<div class="game-screen" id="gameScreen">
+  <div class="game-header">
+    <button class="game-back-btn" onclick="closeGame()">←</button>
+    <h3 class="game-title" id="activeGameTitle">Game</h3>
+    <div class="hud-controls">
+      <button class="sound-btn" id="soundBtn" onclick="toggleSound()" title="Toggle sound">🔊</button>
+      <button class="pause-btn" id="pauseBtn" onclick="togglePause()">⏸ Pause</button>
+      <div class="hud-score" id="hudScore">0</div>
+    </div>
+  </div>
+  <div class="engine-wrapper">
+    <canvas id="gameCanvas" width="700" height="480"></canvas>
+    <canvas id="confettiCanvas"></canvas>
+    <div id="gameCanvasHint" style="color: var(--text-muted); font-size: 13px; font-weight: 500; margin-top: 16px; text-align: center; display: none; letter-spacing: 0.5px; text-transform: uppercase;"></div>
+    <div id="domEngine"></div>
+    <div id="pauseOverlay">
+      <div class="pause-text">⏸ Paused</div><div class="pause-subtext">Press P or tap Resume to continue</div>
+      <button class="resume-btn" onclick="togglePause()">▶ Resume</button>
+    </div>
+    <div id="gameOverScreen">
+      <div class="game-over-card">
+        <div class="pb-ribbon" id="pbRibbon">🏆 NEW PERSONAL BEST!</div>
+        <div class="end-state-text" id="endStateText">Game Over</div>
+        <div class="final-score" id="finalScore">0</div>
+        <div class="save-status" id="saveStatus"></div>
+        <div id="economyStatus" style="font-size:12px; color:var(--text-muted); margin-bottom:12px; font-weight:bold;"></div>
+        <div class="new-achievements" id="newAchievements"></div>
+        <button class="btn-primary" onclick="launchGame(activeDiff,diffMult)">🔄 Play Again</button>
+        <button class="btn-ghost" onclick="closeGame()">Exit to Store</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="vvipModalOverlay">
+  <div class="vvip-modal">
+    <div class="vvip-modal-title" id="modalTitle">Confirm</div>
+    <div class="vvip-modal-body" id="modalBody">Are you sure?</div>
+    <div class="vvip-modal-actions">
+      <button class="btn-modal btn-modal-cancel" id="btnModalCancel" onclick="closeVvipModal()">Cancel</button>
+      <button class="btn-modal btn-modal-confirm" id="btnModalConfirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<audio id="bgmLobby"></audio>
+<audio id="bgmCasino" loop src="https://cdn.pixabay.com/audio/2021/08/09/audio_dc39bde80a.mp3"></audio>
+<audio id="bgmGame" loop src="https://cdn.pixabay.com/audio/2022/03/15/audio_79ef602263.mp3"></audio>
+
+<div id="globalLoader" class="loader-overlay">
+  <div class="arcade-spinner">🎮</div>
+  <div class="loader-text">INSERT COIN...</div>
+</div>
+
+<?!= include('JavaScript'); ?>
+</body>
+</html>
