@@ -16,7 +16,7 @@
 </div>
 
 <header>
-  <div class="logo-area" onclick="showTab('storeFront','tab-all')">
+  <div class="logo-area" onclick="showTab('storeFront','tab-all')" role="button" tabindex="0" aria-label="Go to home">
     <svg width="32" height="32" viewBox="0 0 1024 1024" style="flex-shrink: 0; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
       <path fill="#34A853" d="M136.5,887.6C126.8,877,122,860.5,122,840.1V183.9c0-20.4,4.8-36.9,14.5-47.5l456,456L136.5,887.6z"/>
       <path fill="#FBBC04" d="M759,625.6l-166.5-166.5L592.5,459L759,292.4l156.4,88.9c48.2,27.4,48.2,72.4,0,99.8L759,625.6z"/>
@@ -27,12 +27,12 @@
   </div>
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
-    <input type="text" class="search-bar" id="searchInput" placeholder="Search games & apps" oninput="handleSearch(this.value)">
-    <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
+    <input type="text" class="search-bar" id="searchInput" placeholder="Search games & apps" oninput="handleSearch(this.value)" aria-label="Search games and apps">
+    <button class="search-clear" id="searchClear" onclick="clearSearch()" aria-label="Clear search">✕</button>
   </div>
   <div class="header-actions">
     
-    <div class="wallet-chip" style="display: flex; gap: 8px; align-items: center; padding: 4px 12px; background: transparent; border: none; cursor: pointer;" onclick="showTab('storePage','tab-store')" title="Open Store">
+    <div class="wallet-chip" style="display: flex; gap: 8px; align-items: center; padding: 4px 12px; background: transparent; border: none; cursor: pointer;" onclick="showTab('storePage','tab-store')" title="Open Store" role="button" tabindex="0" aria-label="Open rewards store">
       
       <div style="display: flex; flex-direction: column; align-items: center;">
           <div style="background: #E8F0FE; color: #1A73E8; padding: 0 12px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid #D2E3FC; font-family: 'Google Sans'; white-space: nowrap;">
@@ -59,12 +59,12 @@
       <span id="uiPerfBadge" style="display:none; font-size:12px; font-weight:900; color:#FF9500; margin-left:4px;">🔥 1.0x</span>
     </div>
 
-    <button class="icon-btn" id="soundBtn" onclick="toggleSound()" title="Toggle Sound">🔊</button>
-    <button class="icon-btn" onclick="openSettings()" title="Settings">⚙️</button>
-    <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">🌓</button>
-    <button class="icon-btn" onclick="openModal('feedbackModal')" title="Feedback">💬</button>
-    <button class="icon-btn" id="adminBtn" onclick="openModal('adminModal')" title="Admin Console" style="display:none; color:#EA4335;">🛡️</button>
-    <div class="avatar" id="userAvatar" onclick="openProfile()" title="Your profile">?</div>
+    <button class="icon-btn" id="soundBtn" onclick="toggleSound()" title="Toggle Sound" aria-label="Mute sound">🔊</button>
+    <button class="icon-btn" onclick="openSettings()" title="Settings" aria-label="Settings">⚙️</button>
+    <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">🌓</button>
+    <button class="icon-btn" onclick="openModal('feedbackModal')" title="Feedback" aria-label="Send feedback">💬</button>
+    <button class="icon-btn" id="adminBtn" onclick="openModal('adminModal')" title="Admin Console" style="display:none; color:#EA4335;" aria-label="Admin Console">🛡️</button>
+    <div class="avatar" id="userAvatar" onclick="openProfile()" title="Your profile" role="button" tabindex="0" aria-label="View your profile">?</div>
   </div>
 </header>
 
@@ -83,8 +83,8 @@
   <div class="carousel-container" id="hive-carousel">
     <div class="carousel-wrapper" id="carousel-wrapper"></div>
     
-    <button class="carousel-btn prev-btn" onclick="prevCarouselSlide()">&#10094;</button>
-    <button class="carousel-btn next-btn" onclick="nextCarouselSlide()">&#10095;</button>
+    <button class="carousel-btn prev-btn" onclick="prevCarouselSlide()" aria-label="Previous slide">&#10094;</button>
+    <button class="carousel-btn next-btn" onclick="nextCarouselSlide()" aria-label="Next slide">&#10095;</button>
   </div>
 
   <div class="bounty-card" id="bountyCard">
@@ -474,7 +474,7 @@
   <div class="drawer-header">
     <div class="drawer-avatar" id="drawerAvatar">?</div>
     <div class="drawer-user"><h3 id="drawerName">Loading…</h3><p id="drawerEmail"></p></div>
-    <button class="drawer-close" onclick="closeProfile()">✕</button>
+    <button class="drawer-close" onclick="closeProfile()" aria-label="Close profile">✕</button>
   </div>
   <div id="drawerContent"><div style="padding:40px;text-align:center;color:var(--text-muted);font-size:14px;">Loading your stats…</div></div>
 </div>
@@ -483,10 +483,10 @@
 
 <div class="game-screen" id="gameScreen">
   <div class="game-header">
-    <button class="game-back-btn" onclick="closeGame()">←</button>
+    <button class="game-back-btn" onclick="closeGame()" aria-label="Exit to home">←</button>
     <h3 class="game-title" id="activeGameTitle">Game</h3>
     <div class="hud-controls">
-      <button class="sound-btn" id="soundBtn" onclick="toggleSound()" title="Toggle sound">🔊</button>
+      <button class="sound-btn" id="soundBtn" onclick="toggleSound()" title="Toggle sound" aria-label="Mute sound">🔊</button>
       <button class="pause-btn" id="pauseBtn" onclick="togglePause()">⏸ Pause</button>
       <div class="hud-score" id="hudScore">0</div>
     </div>
