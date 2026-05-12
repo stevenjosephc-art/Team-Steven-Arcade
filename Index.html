@@ -69,14 +69,14 @@
 </header>
 
 <div class="tabs">
-  <div class="tab-indicator" id="tabIndicator"></div> <div class="tab active" id="tab-all" onclick="filterCategory('All',this)">For you</div>
-  <div class="tab" id="tab-arcade" onclick="filterCategory('Arcade',this)">Arcade Action</div>
-  <div class="tab" id="tab-puzzle" onclick="filterCategory('Puzzle',this)">Brain &amp; Logic</div>
-  <div class="tab" id="tab-card" onclick="filterCategory('Card',this)">Card Games</div>
-  <div class="tab" id="tab-hof" onclick="showTab('hallOfFame','tab-hof'); loadHallOfFame();">Hall of Fame</div>
-  <div class="tab" id="tab-charts" onclick="showTab('topCharts','tab-charts')">Top Charts</div>
-  <div class="tab" id="tab-store" onclick="showTab('storePage','tab-store');">Rewards Store</div>
-  <div class="tab" id="tab-casino" onclick="showTab('casinoPage','tab-casino');" style="color: #E94560; font-weight: 700;">🎰 Vegas Casino</div>
+  <div class="tab-indicator" id="tabIndicator"></div> <div class="tab active" id="tab-all" onclick="filterCategory('All',this)" role="button" tabindex="0">For you</div>
+  <div class="tab" id="tab-arcade" onclick="filterCategory('Arcade',this)" role="button" tabindex="0">Arcade Action</div>
+  <div class="tab" id="tab-puzzle" onclick="filterCategory('Puzzle',this)" role="button" tabindex="0">Brain &amp; Logic</div>
+  <div class="tab" id="tab-card" onclick="filterCategory('Card',this)" role="button" tabindex="0">Card Games</div>
+  <div class="tab" id="tab-hof" onclick="showTab('hallOfFame','tab-hof'); loadHallOfFame();" role="button" tabindex="0">Hall of Fame</div>
+  <div class="tab" id="tab-charts" onclick="showTab('topCharts','tab-charts')" role="button" tabindex="0">Top Charts</div>
+  <div class="tab" id="tab-store" onclick="showTab('storePage','tab-store');" role="button" tabindex="0">Rewards Store</div>
+  <div class="tab" id="tab-casino" onclick="showTab('casinoPage','tab-casino');" style="color: #E94560; font-weight: 700;" role="button" tabindex="0">🎰 Vegas Casino</div>
 </div>
 
 <div id="storeFront" class="container active">
@@ -102,9 +102,9 @@
   <div class="lb-controls">
     <h2 class="lb-title">👑 Hall of Fame</h2>
     <div class="lb-filters">
-      <div class="filter-chip active" id="btnHofXp" onclick="loadHallOfFame('xp')">🌟 Prestige (XP)</div>
-      <div class="filter-chip" id="btnHofWealth" onclick="loadHallOfFame('wealth')">💰 Wealth (Unspent Pts)</div>
-      <div class="filter-chip" id="btnHofTeam" onclick="loadHallOfFame('team')">🛡️ Top Squads</div>
+      <div class="filter-chip active" id="btnHofXp" onclick="loadHallOfFame('xp')" role="button" tabindex="0">🌟 Prestige (XP)</div>
+      <div class="filter-chip" id="btnHofWealth" onclick="loadHallOfFame('wealth')" role="button" tabindex="0">💰 Wealth (Unspent Pts)</div>
+      <div class="filter-chip" id="btnHofTeam" onclick="loadHallOfFame('team')" role="button" tabindex="0">🛡️ Top Squads</div>
     </div>
   </div>
   <div class="hof-arena" id="hofArena">
@@ -121,11 +121,11 @@
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
       <select class="game-select" id="lbSelect" onchange="loadLeaderboard()"></select>
       <div class="lb-filters">
-        <div class="filter-chip active" onclick="setLbFilter('all',this)">All Time</div>
-        <div class="filter-chip" onclick="setLbFilter('week',this)">This Week</div>
-        <div class="filter-chip" onclick="setLbFilter('Easy',this)">Casual</div>
-        <div class="filter-chip" onclick="setLbFilter('Medium',this)">Standard</div>
-        <div class="filter-chip" onclick="setLbFilter('Hard',this)">Hardcore</div>
+        <div class="filter-chip active" onclick="setLbFilter('all',this)" role="button" tabindex="0">All Time</div>
+        <div class="filter-chip" onclick="setLbFilter('week',this)" role="button" tabindex="0">This Week</div>
+        <div class="filter-chip" onclick="setLbFilter('Easy',this)" role="button" tabindex="0">Casual</div>
+        <div class="filter-chip" onclick="setLbFilter('Medium',this)" role="button" tabindex="0">Standard</div>
+        <div class="filter-chip" onclick="setLbFilter('Hard',this)" role="button" tabindex="0">Hardcore</div>
       </div>
     </div>
   </div>
@@ -436,11 +436,11 @@
 
       <div class="settings-row">
         <span>🔊 Master Volume</span>
-        <input type="range" class="settings-slider" id="volSlider" min="0" max="100" value="100" onchange="updateVolume(this.value)">
+        <input type="range" class="settings-slider" id="volSlider" min="0" max="100" value="100" onchange="updateVolume(this.value)" aria-label="Master Volume">
       </div>
       <div class="settings-row">
         <span>✨ Particle Effects</span>
-        <input type="checkbox" id="particleToggle" checked onchange="toggleParticles(this.checked)" style="transform: scale(1.2); accent-color: var(--play-green);">
+        <input type="checkbox" id="particleToggle" checked onchange="toggleParticles(this.checked)" style="transform: scale(1.2); accent-color: var(--play-green);" aria-label="Toggle Particle Effects">
       </div>
 
     </div>
