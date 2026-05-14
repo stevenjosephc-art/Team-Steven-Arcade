@@ -228,9 +228,11 @@
     .logo-area{display:flex;align-items:center;gap:8px;font-size:19px;font-weight:500;font-family:var(--font-google);cursor:pointer;color:var(--text-main);white-space:nowrap;flex-shrink:0;text-decoration:none;transition:opacity var(--transition);}
     .logo-area:hover{opacity:0.85;} .logo-area svg{width:28px;height:28px;flex-shrink:0;}
     .search-wrap{flex:1;max-width:720px;position:relative;margin:0 auto;}
-    .search-bar{width:100%;background:var(--surface-2);border-radius:28px;padding:11px 16px 11px 46px;color:var(--text-main);font-size:14px;font-family:var(--font-body);border:1.5px solid transparent;outline:none;transition:all var(--transition);}
+    .search-bar{width:100%;background:var(--surface-2);border-radius:28px;padding:11px 72px 11px 46px;color:var(--text-main);font-size:14px;font-family:var(--font-body);border:1.5px solid transparent;outline:none;transition:all var(--transition);}
     .search-bar:focus{background:var(--surface);border-color:var(--g-blue);box-shadow:0 0 0 3px rgba(26,115,232,0.15);}
     .search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:17px;pointer-events:none;}
+    .search-hint{position:absolute;right:44px;top:50%;transform:translateY(-50%);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;color:var(--text-muted);pointer-events:none;font-family:var(--font-google);box-shadow:var(--shadow-sm);transition:opacity var(--transition);}
+    .search-bar:focus ~ .search-hint, .search-bar:not(:placeholder-shown) ~ .search-hint { opacity: 0; }
     .search-clear{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;display:none;padding:2px;border-radius:50%;}
     .header-actions{display:flex;gap:8px;align-items:center;flex-shrink:0;margin-left:auto;}
     .icon-btn{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;transition:background var(--transition);} .icon-btn:hover{background:var(--surface-hover);}
