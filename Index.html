@@ -28,6 +28,7 @@
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
     <input type="text" class="search-bar" id="searchInput" placeholder="Search games & apps" oninput="handleSearch(this.value)" aria-label="Search games and apps">
+    <kbd class="search-hint">/</kbd>
     <button class="search-clear" id="searchClear" onclick="clearSearch()" aria-label="Clear search">✕</button>
   </div>
   <div class="header-actions">
@@ -68,15 +69,15 @@
   </div>
 </header>
 
-<div class="tabs">
-  <div class="tab-indicator" id="tabIndicator"></div> <div class="tab active" id="tab-all" onclick="filterCategory('All',this)">For you</div>
-  <div class="tab" id="tab-arcade" onclick="filterCategory('Arcade',this)">Arcade Action</div>
-  <div class="tab" id="tab-puzzle" onclick="filterCategory('Puzzle',this)">Brain &amp; Logic</div>
-  <div class="tab" id="tab-card" onclick="filterCategory('Card',this)">Card Games</div>
-  <div class="tab" id="tab-hof" onclick="showTab('hallOfFame','tab-hof'); loadHallOfFame();">Hall of Fame</div>
-  <div class="tab" id="tab-charts" onclick="showTab('topCharts','tab-charts')">Top Charts</div>
-  <div class="tab" id="tab-store" onclick="showTab('storePage','tab-store');">Rewards Store</div>
-  <div class="tab" id="tab-casino" onclick="showTab('casinoPage','tab-casino');" style="color: #E94560; font-weight: 700;">🎰 Vegas Casino</div>
+<div class="tabs" role="tablist">
+  <div class="tab-indicator" id="tabIndicator"></div> <div class="tab active" id="tab-all" onclick="filterCategory('All',this)" role="tab" aria-selected="true" tabindex="0">For you</div>
+  <div class="tab" id="tab-arcade" onclick="filterCategory('Arcade',this)" role="tab" aria-selected="false" tabindex="0">Arcade Action</div>
+  <div class="tab" id="tab-puzzle" onclick="filterCategory('Puzzle',this)" role="tab" aria-selected="false" tabindex="0">Brain &amp; Logic</div>
+  <div class="tab" id="tab-card" onclick="filterCategory('Card',this)" role="tab" aria-selected="false" tabindex="0">Card Games</div>
+  <div class="tab" id="tab-hof" onclick="showTab('hallOfFame','tab-hof'); loadHallOfFame();" role="tab" aria-selected="false" tabindex="0">Hall of Fame</div>
+  <div class="tab" id="tab-charts" onclick="showTab('topCharts','tab-charts')" role="tab" aria-selected="false" tabindex="0">Top Charts</div>
+  <div class="tab" id="tab-store" onclick="showTab('storePage','tab-store');" role="tab" aria-selected="false" tabindex="0">Rewards Store</div>
+  <div class="tab" id="tab-casino" onclick="showTab('casinoPage','tab-casino');" style="color: #E94560; font-weight: 700;" role="tab" aria-selected="false" tabindex="0">🎰 Vegas Casino</div>
 </div>
 
 <div id="storeFront" class="container active">
@@ -101,10 +102,10 @@
 <div id="hallOfFame" class="container">
   <div class="lb-controls">
     <h2 class="lb-title">👑 Hall of Fame</h2>
-    <div class="lb-filters">
-      <div class="filter-chip active" id="btnHofXp" onclick="loadHallOfFame('xp')">🌟 Prestige (XP)</div>
-      <div class="filter-chip" id="btnHofWealth" onclick="loadHallOfFame('wealth')">💰 Wealth (Unspent Pts)</div>
-      <div class="filter-chip" id="btnHofTeam" onclick="loadHallOfFame('team')">🛡️ Top Squads</div>
+    <div class="lb-filters" role="group" aria-label="Hall of Fame filters">
+      <div class="filter-chip active" id="btnHofXp" onclick="loadHallOfFame('xp')" role="button" tabindex="0">🌟 Prestige (XP)</div>
+      <div class="filter-chip" id="btnHofWealth" onclick="loadHallOfFame('wealth')" role="button" tabindex="0">💰 Wealth (Unspent Pts)</div>
+      <div class="filter-chip" id="btnHofTeam" onclick="loadHallOfFame('team')" role="button" tabindex="0">🛡️ Top Squads</div>
     </div>
   </div>
   <div class="hof-arena" id="hofArena">
@@ -119,13 +120,13 @@
   <div class="lb-controls">
     <h2 class="lb-title">🏆 Top Charts</h2>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-      <select class="game-select" id="lbSelect" onchange="loadLeaderboard()"></select>
-      <div class="lb-filters">
-        <div class="filter-chip active" onclick="setLbFilter('all',this)">All Time</div>
-        <div class="filter-chip" onclick="setLbFilter('week',this)">This Week</div>
-        <div class="filter-chip" onclick="setLbFilter('Easy',this)">Casual</div>
-        <div class="filter-chip" onclick="setLbFilter('Medium',this)">Standard</div>
-        <div class="filter-chip" onclick="setLbFilter('Hard',this)">Hardcore</div>
+      <select class="game-select" id="lbSelect" onchange="loadLeaderboard()" aria-label="Select game for leaderboard"></select>
+      <div class="lb-filters" role="group" aria-label="Leaderboard filters">
+        <div class="filter-chip active" onclick="setLbFilter('all',this)" role="button" tabindex="0">All Time</div>
+        <div class="filter-chip" onclick="setLbFilter('week',this)" role="button" tabindex="0">This Week</div>
+        <div class="filter-chip" onclick="setLbFilter('Easy',this)" role="button" tabindex="0">Casual</div>
+        <div class="filter-chip" onclick="setLbFilter('Medium',this)" role="button" tabindex="0">Standard</div>
+        <div class="filter-chip" onclick="setLbFilter('Hard',this)" role="button" tabindex="0">Hardcore</div>
       </div>
     </div>
   </div>
