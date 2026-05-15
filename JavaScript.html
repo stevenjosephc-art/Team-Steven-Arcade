@@ -435,12 +435,20 @@ function showTab(id,elId){
   }
 
   document.querySelectorAll('.container').forEach(c=>c.classList.remove('active')); 
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); 
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.classList.remove('active');
+    if (t.getAttribute('role') === 'tab') {
+      t.setAttribute('aria-selected', 'false');
+    }
+  });
   document.getElementById(id).classList.add('active');
   
   if(elId) {
     let el = document.getElementById(elId);
     el.classList.add('active');
+    if (el.getAttribute('role') === 'tab') {
+      el.setAttribute('aria-selected', 'true');
+    }
     updateTabIndicator(el); // Slides the visual indicator!
   }
   
@@ -463,8 +471,9 @@ var konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', '
 var konamiPos = 0;
 
 window.addEventListener('keydown', e => {
-  // --- QoL: KEYBOARD ACCESSIBILITY FOR ROLE="BUTTON" ---
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute('role') === 'button') {
+  // --- QoL: KEYBOARD ACCESSIBILITY FOR ROLE="BUTTON" & ROLE="TAB" ---
+  const role = e.target.getAttribute('role');
+  if ((e.key === 'Enter' || e.key === ' ') && (role === 'button' || role === 'tab')) {
       e.preventDefault();
       e.target.click();
   }
@@ -10994,7 +11003,7 @@ function renderFeatured(names){
       `<div class="feat-banner" style="background-image: url('${safeIcon}'); background-size: cover; background-position: center;"></div><div class="feat-icon" style="background-image: url('${safeIcon}'); background-size: cover; background-position: center;"></div>` : 
       `<div class="feat-banner" style="background: ${GAME_BG[name]||'var(--surface-2)'}; display:flex; align-items:center; justify-content:center; font-size: 72px;">${safeIcon}</div><div class="feat-icon" style="background: ${GAME_BG[name]||'var(--surface-2)'}; font-size: 24px;">${safeIcon}</div>`;
        
-    row.innerHTML+=`<div class="feat-card" onclick="openAppSheet('${name}')">${iconHtml}<div class="feat-info"><div class="feat-meta"><h4>${name}</h4><p>${game.dev} · ${game.rating}★</p><span class="feat-badge ${badgeClass[name]||'new'}">${badges[name]||'Featured'}</span>${pb?'<p style="font-size:10px;color:var(--play-green);margin-top:3px;">PB: '+pb+'</p>':''}</div></div></div>`; 
+    row.innerHTML+=`<div class="feat-card" onclick="openAppSheet('${name}')" role="button" tabindex="0">${iconHtml}<div class="feat-info"><div class="feat-meta"><h4>${name}</h4><p>${game.dev} · ${game.rating}★</p><span class="feat-badge ${badgeClass[name]||'new'}">${badges[name]||'Featured'}</span>${pb?'<p style="font-size:10px;color:var(--play-green);margin-top:3px;">PB: '+pb+'</p>':''}</div></div></div>`;
   });
 }
 
@@ -12244,9 +12253,13 @@ function enforceLevelGates() {
       if (currentPlayerLevel < gate.req) {
         el.classList.add('locked');
         el.innerHTML = `🔒 Lv. ${gate.req}`;
+        el.setAttribute('tabindex', '-1');
+        el.setAttribute('aria-disabled', 'true');
       } else {
         el.classList.remove('locked');
         el.innerHTML = gate.name;
+        el.setAttribute('tabindex', '0');
+        el.removeAttribute('aria-disabled');
       }
     }
   });
