@@ -435,12 +435,16 @@ function showTab(id,elId){
   }
 
   document.querySelectorAll('.container').forEach(c=>c.classList.remove('active')); 
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); 
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.classList.remove('active');
+    if (t.getAttribute('role') === 'tab') t.setAttribute('aria-selected', 'false');
+  });
   document.getElementById(id).classList.add('active');
   
   if(elId) {
     let el = document.getElementById(elId);
     el.classList.add('active');
+    if (el.getAttribute('role') === 'tab') el.setAttribute('aria-selected', 'true');
     updateTabIndicator(el); // Slides the visual indicator!
   }
   
@@ -463,8 +467,8 @@ var konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', '
 var konamiPos = 0;
 
 window.addEventListener('keydown', e => {
-  // --- QoL: KEYBOARD ACCESSIBILITY FOR ROLE="BUTTON" ---
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute('role') === 'button') {
+  // --- QoL: KEYBOARD ACCESSIBILITY FOR ROLE="BUTTON" OR ROLE="TAB" ---
+  if ((e.key === 'Enter' || e.key === ' ') && (e.target.getAttribute('role') === 'button' || e.target.getAttribute('role') === 'tab')) {
       e.preventDefault();
       e.target.click();
   }
@@ -11394,7 +11398,7 @@ function renderFeatured(names){
       `<div class="feat-banner" style="background-image: url('${safeIcon}'); background-size: cover; background-position: center;"></div><div class="feat-icon" style="background-image: url('${safeIcon}'); background-size: cover; background-position: center;"></div>` : 
       `<div class="feat-banner" style="background: ${GAME_BG[name]||'var(--surface-2)'}; display:flex; align-items:center; justify-content:center; font-size: 72px;">${safeIcon}</div><div class="feat-icon" style="background: ${GAME_BG[name]||'var(--surface-2)'}; font-size: 24px;">${safeIcon}</div>`;
        
-    row.innerHTML+=`<div class="feat-card" onclick="openAppSheet('${name}')">${iconHtml}<div class="feat-info"><div class="feat-meta"><h4>${name}</h4><p>${game.dev} · ${game.rating}★</p><span class="feat-badge ${badgeClass[name]||'new'}">${badges[name]||'Featured'}</span>${pb?'<p style="font-size:10px;color:var(--play-green);margin-top:3px;">PB: '+pb+'</p>':''}</div></div></div>`; 
+    row.innerHTML+=`<div class="feat-card" onclick="openAppSheet('${name}')" role="button" tabindex="0" aria-label="Play ${name}">${iconHtml}<div class="feat-info"><div class="feat-meta"><h4>${name}</h4><p>${game.dev} · ${game.rating}★</p><span class="feat-badge ${badgeClass[name]||'new'}">${badges[name]||'Featured'}</span>${pb?'<p style="font-size:10px;color:var(--play-green);margin-top:3px;">PB: '+pb+'</p>':''}</div></div></div>`;
   });
 }
 
@@ -11506,7 +11510,16 @@ function filterCategory(cat, el) {
 
 function populateLbSelect(){ var sel=document.getElementById('lbSelect');if(!sel)return;sel.innerHTML=''; Object.keys(Games).forEach(name=>{sel.innerHTML+=`<option value="${name}">${name}</option>`;}); }
 
-function setLbFilter(f,el){ lbFilter=f; document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); loadLeaderboard(); }
+function setLbFilter(f,el){
+  lbFilter=f;
+  document.querySelectorAll('#topCharts .filter-chip').forEach(c=>{
+    c.classList.remove('active');
+    if (c.getAttribute('role') === 'button') c.setAttribute('aria-pressed', 'false');
+  });
+  el.classList.add('active');
+  if (el.getAttribute('role') === 'button') el.setAttribute('aria-pressed', 'true');
+  loadLeaderboard();
+}
 function loadLeaderboard() {
   var gameEl = document.getElementById('lbSelect');
   var game = gameEl ? gameEl.value : '';
@@ -11572,10 +11585,13 @@ function loadHallOfFame(sortType = 'xp') {
   let btnTeam = document.getElementById('btnHofTeam');
   
   if(btnXp && btnWealth && btnTeam) {
-    btnXp.classList.remove('active'); btnWealth.classList.remove('active'); btnTeam.classList.remove('active');
-    if(sortType === 'wealth') btnWealth.classList.add('active');
-    else if(sortType === 'team') btnTeam.classList.add('active');
-    else btnXp.classList.add('active');
+    [btnXp, btnWealth, btnTeam].forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.getAttribute('role') === 'button') btn.setAttribute('aria-pressed', 'false');
+    });
+    let activeBtn = sortType === 'wealth' ? btnWealth : (sortType === 'team' ? btnTeam : btnXp);
+    activeBtn.classList.add('active');
+    if (activeBtn.getAttribute('role') === 'button') activeBtn.setAttribute('aria-pressed', 'true');
   }
 
   var el = document.getElementById('hofListContent'); 
@@ -12644,9 +12660,13 @@ function enforceLevelGates() {
       if (currentPlayerLevel < gate.req) {
         el.classList.add('locked');
         el.innerHTML = `🔒 Lv. ${gate.req}`;
+        el.setAttribute('aria-disabled', 'true');
+        el.setAttribute('tabindex', '-1');
       } else {
         el.classList.remove('locked');
         el.innerHTML = gate.name;
+        el.setAttribute('aria-disabled', 'false');
+        el.setAttribute('tabindex', '0');
       }
     }
   });
