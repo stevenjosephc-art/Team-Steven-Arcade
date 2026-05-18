@@ -1,3 +1,7 @@
 ## 2026-05-10 - Enhancing Accessibility in Google Apps Script Applications
 **Learning:** In projects using non-semantic elements (like `div`) as interactive components, accessibility is often overlooked. These elements must be explicitly given `role="button"` and `tabindex="0"` to be discoverable by assistive technologies and keyboard users. Additionally, global listeners for 'Enter' and 'Space' keys are necessary as `div` elements do not trigger `click` events on key presses by default.
 **Action:** Always check for interactive non-button elements and ensure they have proper ARIA roles, focusability, and keyboard support. For icon-only buttons, descriptive `aria-label` attributes are a must.
+
+## 2026-05-15 - ARIA Tab Pattern in Google Apps Script
+**Learning:** When implementing the ARIA Tab Panel pattern in applications with dynamic content visibility, it's crucial to synchronize `aria-selected` on tabs with `aria-hidden` on panels. Native focus management can be improved by ensuring that only the active tab is in the tab order (`tabindex="0"`) or by handling arrow key navigation within a `role="tablist"`. Additionally, when using gated UI (locked levels), `aria-disabled="true"` and `tabindex="-1"` must be applied to prevent keyboard interaction while still allowing the element to be discovered by screen readers.
+**Action:** Always use a centralized navigation function (like `showTab`) to manage all ARIA states for tabs and panels simultaneously. Ensure global key listeners handle both `role="button"` and `role="tab"`.
