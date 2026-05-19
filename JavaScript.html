@@ -434,14 +434,29 @@ function showTab(id,elId){
       return; 
   }
 
-  document.querySelectorAll('.container').forEach(c=>c.classList.remove('active')); 
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); 
-  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.container').forEach(c => {
+    c.classList.remove('active');
+    c.setAttribute('aria-hidden', 'true');
+  });
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+    t.setAttribute('tabindex', '-1');
+  });
+
+  const targetPanel = document.getElementById(id);
+  targetPanel.classList.add('active');
+  targetPanel.setAttribute('aria-hidden', 'false');
   
   if(elId) {
     let el = document.getElementById(elId);
     el.classList.add('active');
+    el.setAttribute('aria-selected', 'true');
+    el.setAttribute('tabindex', '0');
     updateTabIndicator(el); // Slides the visual indicator!
+
+    // Accessibility: Sync label for multi-tab panels
+    if (id === 'storeFront') targetPanel.setAttribute('aria-labelledby', elId);
   }
   
   if(id==='topCharts')loadLeaderboard();
@@ -463,10 +478,29 @@ var konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', '
 var konamiPos = 0;
 
 window.addEventListener('keydown', e => {
-  // --- QoL: KEYBOARD ACCESSIBILITY FOR ROLE="BUTTON" ---
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute('role') === 'button') {
+  // --- QoL: KEYBOARD ACCESSIBILITY FOR ROLE="BUTTON" AND ROLE="TAB" ---
+  const role = e.target.getAttribute('role');
+  if ((e.key === 'Enter' || e.key === ' ') && (role === 'button' || role === 'tab')) {
       e.preventDefault();
       e.target.click();
+  }
+
+  // --- QoL: ARROW KEY NAVIGATION FOR ROLE="TABLIST" ---
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) && role === 'tab') {
+      const tabList = e.target.closest('[role="tablist"]');
+      if (tabList) {
+          const tabs = Array.from(tabList.querySelectorAll('[role="tab"]:not(.locked)'));
+          const idx = tabs.indexOf(e.target);
+          if (idx !== -1) {
+              e.preventDefault();
+              let nextIdx = (e.key === 'ArrowLeft' || e.key === 'ArrowUp') ? idx - 1 : idx + 1;
+              if (nextIdx < 0) nextIdx = tabs.length - 1;
+              if (nextIdx >= tabs.length) nextIdx = 0;
+              tabs.forEach(t => t.setAttribute('tabindex', '-1'));
+              tabs[nextIdx].setAttribute('tabindex', '0');
+              tabs[nextIdx].focus();
+          }
+      }
   }
 
   // --- QoL: UNIVERSAL HOTKEYS ---
@@ -11506,7 +11540,7 @@ function filterCategory(cat, el) {
 
 function populateLbSelect(){ var sel=document.getElementById('lbSelect');if(!sel)return;sel.innerHTML=''; Object.keys(Games).forEach(name=>{sel.innerHTML+=`<option value="${name}">${name}</option>`;}); }
 
-function setLbFilter(f,el){ lbFilter=f; document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); loadLeaderboard(); }
+function setLbFilter(f,el){ lbFilter=f; el.parentElement.querySelectorAll('.filter-chip').forEach(c=>{c.classList.remove('active'); c.setAttribute('aria-pressed','false');}); el.classList.add('active'); el.setAttribute('aria-pressed','true'); loadLeaderboard(); }
 function loadLeaderboard() {
   var gameEl = document.getElementById('lbSelect');
   var game = gameEl ? gameEl.value : '';
@@ -11572,10 +11606,9 @@ function loadHallOfFame(sortType = 'xp') {
   let btnTeam = document.getElementById('btnHofTeam');
   
   if(btnXp && btnWealth && btnTeam) {
-    btnXp.classList.remove('active'); btnWealth.classList.remove('active'); btnTeam.classList.remove('active');
-    if(sortType === 'wealth') btnWealth.classList.add('active');
-    else if(sortType === 'team') btnTeam.classList.add('active');
-    else btnXp.classList.add('active');
+    [btnXp, btnWealth, btnTeam].forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
+    let activeBtn = sortType === 'wealth' ? btnWealth : (sortType === 'team' ? btnTeam : btnXp);
+    activeBtn.classList.add('active'); activeBtn.setAttribute('aria-pressed', 'true');
   }
 
   var el = document.getElementById('hofListContent'); 
@@ -12643,9 +12676,14 @@ function enforceLevelGates() {
     if (el) {
       if (currentPlayerLevel < gate.req) {
         el.classList.add('locked');
+        el.setAttribute('aria-disabled', 'true');
+        el.setAttribute('tabindex', '-1');
         el.innerHTML = `🔒 Lv. ${gate.req}`;
       } else {
         el.classList.remove('locked');
+        el.removeAttribute('aria-disabled');
+        if (!el.classList.contains('active')) el.setAttribute('tabindex', '-1');
+        else el.setAttribute('tabindex', '0');
         el.innerHTML = gate.name;
       }
     }

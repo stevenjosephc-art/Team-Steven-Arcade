@@ -840,4 +840,11 @@
       color: var(--text-hint) !important;
     }
 
+    /* Accessibility: High-contrast focus states for keyboard users */
+    :focus-visible {
+      outline: 3px solid var(--g-green);
+      outline-offset: 2px;
+      z-index: 100;
+    }
+
   </style>
