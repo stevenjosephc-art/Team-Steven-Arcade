@@ -840,4 +840,14 @@
       color: var(--text-hint) !important;
     }
 
+    /* 5. ACCESSIBLE FOCUS INDICATORS */
+    [role="button"]:focus-visible,
+    [role="tab"]:focus-visible,
+    .app-card:focus-visible,
+    button:focus-visible {
+      outline: 3px solid var(--play-green) !important;
+      outline-offset: 2px !important;
+      box-shadow: none !important;
+    }
+
   </style>
