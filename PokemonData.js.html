@@ -1,10 +1,13 @@
 <script>
 // POKEMON PLAY: MASTER DATA
 var POKEMON_MOVES = {
+    // Basic / Normal
     'Tackle': { type: 'Normal', pwr: 40, acc: 100, pp: 35 },
-    'Quick Attack': { type: 'Normal', pwr: 40, acc: 100, pp: 30 },
+    'Quick Attack': { type: 'Normal', pwr: 40, acc: 100, pp: 30, priority: 1 },
     'Body Slam': { type: 'Normal', pwr: 85, acc: 100, pp: 15 },
     'Hyper Beam': { type: 'Normal', pwr: 150, acc: 90, pp: 5 },
+    
+    // Elemental Damage
     'Ember': { type: 'Fire', pwr: 40, acc: 100, pp: 25 },
     'Flamethrower': { type: 'Fire', pwr: 90, acc: 100, pp: 15 },
     'Fire Blast': { type: 'Fire', pwr: 110, acc: 85, pp: 5 },
@@ -23,15 +26,33 @@ var POKEMON_MOVES = {
     'Earthquake': { type: 'Ground', pwr: 100, acc: 100, pp: 10 },
     'Peck': { type: 'Flying', pwr: 35, acc: 100, pp: 35 },
     'Karate Chop': { type: 'Fighting', pwr: 50, acc: 100, pp: 25 },
-    'Sludge': { type: 'Poison', pwr: 65, acc: 100, pp: 20 },
+    'Sludge Bomb': { type: 'Poison', pwr: 90, acc: 100, pp: 10 },
     'Bug Bite': { type: 'Bug', pwr: 60, acc: 100, pp: 20 },
-    'Lick': { type: 'Ghost', pwr: 30, acc: 100, pp: 30 },
-    'Dragon Rage': { type: 'Dragon', pwr: 80, acc: 100, pp: 10 },
-    'Fairy Wind': { type: 'Fairy', pwr: 40, acc: 100, pp: 30 },
-    'Bite': { type: 'Dark', pwr: 60, acc: 100, pp: 25 },
+    'Shadow Ball': { type: 'Ghost', pwr: 80, acc: 100, pp: 15 },
+    'Dragon Claw': { type: 'Dragon', pwr: 80, acc: 100, pp: 15 },
+    'Moonblast': { type: 'Fairy', pwr: 95, acc: 100, pp: 15 },
     'Crunch': { type: 'Dark', pwr: 80, acc: 100, pp: 15 },
     'Iron Tail': { type: 'Steel', pwr: 100, acc: 75, pp: 15 },
-    'Flash Cannon': { type: 'Steel', pwr: 80, acc: 100, pp: 10 }
+    'Ice Beam': { type: 'Ice', pwr: 90, acc: 100, pp: 10 },
+
+    // NEW: Drain Moves (Heals user based on damage dealt)
+    'Giga Drain': { type: 'Grass', pwr: 75, acc: 100, pp: 10, healDmg: 0.5 },
+    'Drain Punch': { type: 'Fighting', pwr: 75, acc: 100, pp: 10, healDmg: 0.5 },
+
+    // NEW: Setup & Status Moves (PWR 0)
+    'Swords Dance': { type: 'Normal', pwr: 0, acc: 100, pp: 20, buff: 'atk', amount: 1.5 },
+    'Iron Defense': { type: 'Steel', pwr: 0, acc: 100, pp: 15, buff: 'def', amount: 1.5 },
+    'Recover': { type: 'Normal', pwr: 0, acc: 100, pp: 10, healMax: 0.5 },
+    'Toxic': { type: 'Poison', pwr: 0, acc: 90, pp: 10, status: 'poisoned' },
+    'Thunder Wave': { type: 'Electric', pwr: 0, acc: 90, pp: 20, status: 'paralyzed' },
+    'Will-O-Wisp': { type: 'Fire', pwr: 0, acc: 85, pp: 15, status: 'burned' },
+    'Hypnosis': { type: 'Psychic', pwr: 0, acc: 60, pp: 20, status: 'asleep' },
+    
+    // NEW: Weather Moves
+    'Rain Dance': { type: 'Water', pwr: 0, acc: 100, pp: 5, weather: 'rain' },
+    'Sunny Day': { type: 'Fire', pwr: 0, acc: 100, pp: 5, weather: 'sun' },
+    'Sandstorm': { type: 'Rock', pwr: 0, acc: 100, pp: 5, weather: 'sand' },
+    'Hail': { type: 'Ice', pwr: 0, acc: 100, pp: 5, weather: 'hail' }
 };
 
 
