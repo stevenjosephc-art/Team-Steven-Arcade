@@ -36,7 +36,7 @@ var babiPos = 0;
 // ════════════════════════════════════════════════════════════
 // 
 
-const CLIENT_VERSION = "v2.0.10"; // MUST MATCH APP_VERSION IN CODE.GS!
+const CLIENT_VERSION = "v2.0.12"; // MUST MATCH APP_VERSION IN CODE.GS!
 
 // Run the 1-Hour strict check in the background
 setInterval(() => {
@@ -157,25 +157,20 @@ function initializeCarousel() {
           </div>
         `;
       } else if (slide.type === 'bounty') {
-        slideHtml = `
-          <div class="carousel-slide" style="background: ${slide.bgColor}; overflow: hidden; position: relative;">
-            
-            <div class="bounty-pattern"></div>
-            <div class="champion-shimmer"></div>
-            
-            <span class="carousel-badge" style="background: #34A853; z-index: 3;">🎯 REWARDS</span>
-            
-            <div class="slide-content" style="z-index: 2; position: relative;">
-              <div class="slide-details">
-                <h3 style="text-shadow: 0 2px 8px rgba(0,0,0,0.4);">${slide.title}</h3>
-                <p style="font-size: 1.05rem;">${slide.desc}</p>
-              </div>
-              
-              <div style="font-size: 60px; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.4)); animation: pulseAura 3s infinite alternate;">🎁</div>
-            </div>
+      slideHtml = `
+        <div class="carousel-slide bounty-chip-card" style="background: ${slide.bgColor}; padding: 16px; border-radius: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div class="bc-top" style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px;">
+            <div class="bounty-desc" style="color:white;">${slide.desc}</div>
           </div>
-        `;
-      }
+          <div class="bounty-meta" style="margin-top: auto;">
+            <div class="bounty-progress-wrap" style="background:rgba(255,255,255,0.2); height:8px; border-radius:4px; overflow:hidden;">
+              <div class="bounty-progress-fill" style="width:50%; height:100%; background:#fff;"></div>
+            </div>
+            <button class="bounty-claim-btn" style="margin-top:8px; width:100%; background:#fff; border:none; padding:8px; border-radius:8px; font-weight:bold;">Claim</button>
+          </div>
+        </div>
+      `;
+    }
 
       wrapper.insertAdjacentHTML('beforeend', slideHtml);
     });
@@ -657,7 +652,15 @@ var Games={
         { name: "Koga",     badge: "Soul",     lvl: 55, reward: 750000,  team: [89,110,49],   bg: '#2A1A3B', accent: '#A040A0' },
         { name: "Sabrina",  badge: "Marsh",    lvl: 65, reward: 1000000, team: [64,122,65],   bg: '#3B1A3B', accent: '#F85888' },
         { name: "Blaine",   badge: "Volcano",  lvl: 75, reward: 1500000, team: [78,126,59],   bg: '#3B1A0A', accent: '#F08030' },
-        { name: "Giovanni", badge: "Earth",    lvl: 85, reward: 3000000, team: [112,51,34],   bg: '#1A1A1A', accent: '#E0C068' }
+        { name: "Giovanni", badge: "Earth",    lvl: 85, reward: 3000000, team: [112,51,34],   bg: '#1A1A1A', accent: '#E0C068' },
+        { name: "Blaine",   badge: "Volcano",  lvl: 75, reward: 1500000, team: [78,126,59],   bg: '#3B1A0A', accent: '#F08030' },
+        { name: "Giovanni", badge: "Earth",    lvl: 85, reward: 3000000, team: [112,51,34],   bg: '#1A1A1A', accent: '#E0C068' },
+        // --- NEW: THE ELITE FOUR GAUNTLET ---
+        { name: "Lorelei",  badge: "Elite Ice", lvl: 90, reward: 5000000, team: [87,124,131], bg: '#AEEEEE', accent: '#98D8D8' },
+        { name: "Bruno",    badge: "Elite Fight", lvl: 92, reward: 5000000, team: [106,107,68], bg: '#8B4513', accent: '#C03028' },
+        { name: "Agatha",   badge: "Elite Ghost", lvl: 94, reward: 5000000, team: [94,42,94], bg: '#4B0082', accent: '#705898' },
+        { name: "Lance",    badge: "Elite Dragon", lvl: 96, reward: 5000000, team: [130,142,149], bg: '#8B0000', accent: '#7038F8' },
+        { name: "Champion", badge: "Kanto Champion", lvl: 100, reward: 10000000, team: [18,65,6], bg: '#FFD700', accent: '#FFD700' }
     ],
 
     init: function() {
@@ -731,7 +734,7 @@ var Games={
                    setTimeout(function() { location.reload(); }, 2500);
                }
            }
-       }).syncPokemonData(spent, JSON.stringify(self.playerData), "v2.0.10");
+       }).syncPokemonData(spent, JSON.stringify(self.playerData), "v2.0.12");
 
        var defSquad = [];
        this.playerData.squad.forEach(function(id) {
@@ -752,34 +755,71 @@ var Games={
         var pCard = this.playerData && this.playerData.cards ? this.playerData.cards[id] : null;
         var myNature = pCard && pCard.nature ? pCard.nature : 'Hardy';
         var nMult = this.natures[myNature] || { hp: 1.0, atk: 1.0 };
+        
+        // ✨ NEW: Shiny Pokémon receive a permanent +10% "Perfect IV" bonus to all stats!
+        var ivMult = (pCard && pCard.shiny) ? 1.10 : 1.0;
 
         var calcHp  = function(base, lv) { return Math.floor(((2 * base + 31) * lv / 100) + lv + 10); };
         var calcStat = function(base, lv) { return Math.floor(((2 * base + 31) * lv / 100) + 5); };
 
         return { 
             name: d.name, type: d.type, img: d.img, 
-            hp:  Math.floor(calcHp(d.hp,   lvl) * nMult.hp),
-            atk: Math.floor(calcStat(d.atk, lvl) * nMult.atk),
-            def: Math.floor(calcStat(d.def || d.atk, lvl)),
-            spd: Math.floor(calcStat(d.spd || 50,    lvl))
+            hp:  Math.floor(calcHp(d.hp,   lvl) * nMult.hp * ivMult),
+            atk: Math.floor(calcStat(d.atk, lvl) * nMult.atk * ivMult),
+            def: Math.floor(calcStat(d.def || d.atk, lvl) * ivMult),
+            spd: Math.floor(calcStat(d.spd || 50,    lvl) * ivMult)
         };
     },
 
     _generateMoveset: function(type, lvl) {
         var moves = [];
-        if (lvl < 15) moves.push({ name: 'Tackle', pp: POKEMON_MOVES['Tackle'].pp, maxPp: POKEMON_MOVES['Tackle'].pp });
-        else if (lvl < 35) moves.push({ name: 'Quick Attack', pp: POKEMON_MOVES['Quick Attack'].pp, maxPp: POKEMON_MOVES['Quick Attack'].pp });
-        else moves.push({ name: 'Body Slam', pp: POKEMON_MOVES['Body Slam'].pp, maxPp: POKEMON_MOVES['Body Slam'].pp });
+
+        // 1. STAB (Same Type Attack Bonus) Move
+        var typeMoves = Object.keys(POKEMON_MOVES).filter(m => POKEMON_MOVES[m].type === type && POKEMON_MOVES[m].pwr > 0);
+        typeMoves.sort((a, b) => POKEMON_MOVES[a].pwr - POKEMON_MOVES[b].pwr);
         
-        var typeMoves = Object.keys(POKEMON_MOVES).filter(function(m) { return POKEMON_MOVES[m].type === type; });
-        typeMoves.sort(function(a, b) { return POKEMON_MOVES[a].pwr - POKEMON_MOVES[b].pwr; });
-        
-        if (typeMoves.length > 0) moves.push({ name: typeMoves[0], pp: POKEMON_MOVES[typeMoves[0]].pp, maxPp: POKEMON_MOVES[typeMoves[0]].pp });
-        if (lvl >= 20 && typeMoves.length > 1) moves.push({ name: typeMoves[1], pp: POKEMON_MOVES[typeMoves[1]].pp, maxPp: POKEMON_MOVES[typeMoves[1]].pp });
-        if (lvl >= 45 && typeMoves.length > 2) moves.push({ name: typeMoves[2], pp: POKEMON_MOVES[typeMoves[2]].pp, maxPp: POKEMON_MOVES[typeMoves[2]].pp });
-        if (lvl >= 60 && moves.length < 4) moves.push({ name: 'Hyper Beam', pp: POKEMON_MOVES['Hyper Beam'].pp, maxPp: POKEMON_MOVES['Hyper Beam'].pp });
-        
-        return moves;
+        if (typeMoves.length > 0) {
+            if (lvl < 25) moves.push(typeMoves[0]);
+            else if (lvl < 50 && typeMoves.length > 1) moves.push(typeMoves[1]);
+            else moves.push(typeMoves[typeMoves.length - 1]);
+        }
+
+        // 2. Normal / Basic Attack
+        if (lvl < 20) moves.push('Tackle');
+        else if (lvl < 45) moves.push('Body Slam');
+        else moves.push('Hyper Beam');
+
+        // 3. Coverage Move (Random attack NOT of their primary type) - Unlocks at Lv 20
+        if (lvl >= 20) {
+            var covPool = Object.keys(POKEMON_MOVES).filter(m => POKEMON_MOVES[m].pwr > 40 && POKEMON_MOVES[m].type !== type && POKEMON_MOVES[m].type !== 'Normal');
+            var rIdx = (type.charCodeAt(0) + lvl) % covPool.length;
+            moves.push(covPool[rIdx]);
+        }
+
+        // 4. Status / Setup Move - Unlocks at Lv 35
+        if (lvl >= 35) {
+            var statPool = Object.keys(POKEMON_MOVES).filter(m => POKEMON_MOVES[m].pwr === 0);
+            var sIdx = (type.charCodeAt(type.length-1) + lvl) % statPool.length;
+            moves.push(statPool[sIdx]);
+        }
+
+        // Fills gaps if missing moves
+        var fallbacks = ['Quick Attack', 'Bite', 'Earthquake', 'Ice Beam'];
+        while (moves.length < 4) {
+            var f = fallbacks.shift();
+            if (!moves.includes(f)) moves.push(f);
+        }
+
+        // Remove duplicates and construct objects
+        var finalMoves = [];
+        var seen = new Set();
+        for (var i = 0; i < moves.length; i++) {
+            if (!seen.has(moves[i])) {
+                seen.add(moves[i]);
+                finalMoves.push({ name: moves[i], pp: POKEMON_MOVES[moves[i]].pp, maxPp: POKEMON_MOVES[moves[i]].pp });
+            }
+        }
+        return finalMoves.slice(0, 4);
     },
 
     buyItem: function(item, baseCost, qtyId) {
@@ -1161,8 +1201,12 @@ var Games={
         }
         m.pMoves = this._generateMoveset(pStats.type, pLvl);
         m.pState = { status:null, statusTimer:0 };
-        
-        if (!isSwitching) { m.eState = { status:null, statusTimer:0 }; m.menu='main'; if(typeof playSound === 'function') playSound('coin'); }
+        m.pAtkBuff = 1.0; m.pDefBuff = 1.0; // NEW: Reset player buffs on entry
+        if (!isSwitching) { 
+            m.eState = { status:null, statusTimer:0 }; 
+            m.eAtkBuff = 1.0; m.eDefBuff = 1.0; // NEW: Reset enemy buffs
+            m.menu='main'; if(typeof playSound === 'function') playSound('coin'); 
+        }
         m.choiceLocked = null;
     },
 
@@ -1355,9 +1399,16 @@ var Games={
         };
         var self = this;
         var processHit = function(atkName, defName, moveName, mData, atkType, defType, isPlayer) {
-            if (Math.random()*100 > mData.acc) return { log:atkName+"'s attack missed!", dmg:0, hit:false };
-            var attackerAtk = isPlayer ? pStats.atk : eStats.atk;
-            var defenderDef = isPlayer ? eStats.def : pStats.def;
+            if (Math.random()*100 > mData.acc) return { log:atkName+"'s attack missed!", dmg:0, hit:false, isUtility: false };
+            
+            // Handle Status/Buff/Weather Moves immediately without damage calcs
+            if (mData.pwr === 0) return { log: atkName + " used " + moveName + "!", dmg: 0, hit: true, isUtility: true, mData: mData };
+
+            var atkBuff = isPlayer ? (m.pAtkBuff || 1.0) : (m.eAtkBuff || 1.0);
+            var defBuff = isPlayer ? (m.eDefBuff || 1.0) : (m.pDefBuff || 1.0);
+
+            var attackerAtk = (isPlayer ? pStats.atk : eStats.atk) * atkBuff;
+            var defenderDef = (isPlayer ? eStats.def : pStats.def) * defBuff;
             var attackerLvl = isPlayer ? pLvl : m.eSquad[m.eIdx].lvl;
             
             var baseDmg = Math.floor((((2 * attackerLvl / 5 + 2) * mData.pwr * (attackerAtk / Math.max(1, defenderDef))) / 50) + 2);
@@ -1365,6 +1416,15 @@ var Games={
             var dmg = Math.max(1, Math.floor(baseDmg * randomFactor));
             var attackerState = isPlayer ? m.pState : m.eState;
             
+            // 🌧️ WEATHER MODIFIERS
+            if (m.weather === 'rain') {
+                if (atkType === 'Water') dmg = Math.floor(dmg * 1.5);
+                if (atkType === 'Fire') dmg = Math.floor(dmg * 0.5);
+            } else if (m.weather === 'sun') {
+                if (atkType === 'Fire') dmg = Math.floor(dmg * 1.5);
+                if (atkType === 'Water') dmg = Math.floor(dmg * 0.5);
+            }
+
             if (attackerState && attackerState.status==='burned') dmg = Math.floor(dmg*0.5);
             if (isPlayer) {
                 dmg = Math.floor(dmg * pBonus * lifeOrbMult * abilityDmgMult);
@@ -1374,41 +1434,15 @@ var Games={
             var defCurHp = isPlayer ? m.eCurHp : m.pCurHp;
             var defMaxHp = isPlayer ? m.eMaxHp : m.pMaxHp;
             
-            if (defAbility && defAbility.name==='Multiscale' && defCurHp===defMaxHp) {
-                dmg = Math.floor(dmg*0.5);
-                m.log.unshift("Multiscale reduced the damage!");
-            }
-            if (defAbility && defAbility.name==='Thick Fat' && (mData.type==='Fire'||mData.type==='Ice')) {
-                dmg = Math.floor(dmg*0.5);
-            }
+            if (defAbility && defAbility.name==='Multiscale' && defCurHp===defMaxHp) { dmg = Math.floor(dmg*0.5); m.log.unshift("Multiscale reduced the damage!"); }
+            if (defAbility && defAbility.name==='Thick Fat' && (mData.type==='Fire'||mData.type==='Ice')) { dmg = Math.floor(dmg*0.5); }
 
-            var TYPE_CHART = {
-                "normal": { "rock": 0.5, "ghost": 0, "steel": 0.5 },
-                "fire": { "fire": 0.5, "water": 0.5, "grass": 2.0, "ice": 2.0, "bug": 2.0, "rock": 0.5, "dragon": 0.5, "steel": 2.0 },
-                "water": { "fire": 2.0, "water": 0.5, "grass": 0.5, "ground": 2.0, "rock": 2.0, "dragon": 0.5 },
-                "electric": { "water": 2.0, "electric": 0.5, "grass": 0.5, "ground": 0, "flying": 2.0, "dragon": 0.5 },
-                "grass": { "fire": 0.5, "water": 2.0, "grass": 0.5, "poison": 0.5, "ground": 2.0, "flying": 0.5, "bug": 0.5, "rock": 2.0, "dragon": 0.5, "steel": 0.5 },
-                "ice": { "fire": 0.5, "water": 0.5, "grass": 2.0, "ice": 0.5, "ground": 2.0, "flying": 2.0, "dragon": 2.0, "steel": 0.5 },
-                "fighting": { "normal": 2.0, "ice": 2.0, "poison": 0.5, "flying": 0.5, "psychic": 0.5, "bug": 0.5, "rock": 2.0, "ghost": 0, "dark": 2.0, "steel": 2.0, "fairy": 0.5 },
-                "poison": { "grass": 2.0, "poison": 0.5, "ground": 0.5, "rock": 0.5, "ghost": 0.5, "steel": 0, "fairy": 2.0 },
-                "ground": { "fire": 2.0, "electric": 2.0, "grass": 0.5, "poison": 2.0, "flying": 0, "bug": 0.5, "rock": 2.0, "steel": 2.0 },
-                "flying": { "electric": 0.5, "grass": 2.0, "fighting": 2.0, "bug": 2.0, "rock": 0.5, "steel": 0.5 },
-                "psychic": { "fighting": 2.0, "poison": 2.0, "psychic": 0.5, "dark": 0, "steel": 0.5 },
-                "bug": { "fire": 0.5, "grass": 2.0, "fighting": 0.5, "poison": 0.5, "flying": 0.5, "psychic": 2.0, "ghost": 0.5, "dark": 2.0, "steel": 0.5, "fairy": 0.5 },
-                "rock": { "fire": 2.0, "ice": 2.0, "fighting": 0.5, "ground": 0.5, "flying": 2.0, "bug": 2.0, "steel": 0.5 },
-                "ghost": { "normal": 0, "psychic": 2.0, "ghost": 2.0, "dark": 0.5 },
-                "dragon": { "dragon": 2.0, "steel": 0.5, "fairy": 0 },
-                "dark": { "fighting": 0.5, "psychic": 2.0, "ghost": 2.0, "dark": 0.5, "fairy": 0.5 },
-                "steel": { "fire": 0.5, "water": 0.5, "electric": 0.5, "ice": 2.0, "rock": 2.0, "steel": 0.5, "fairy": 2.0 },
-                "fairy": { "fire": 0.5, "fighting": 2.0, "poison": 0.5, "dragon": 2.0, "dark": 2.0, "steel": 0.5 }
-            };
+            var TYPE_CHART = { "normal": {"rock":0.5,"ghost":0,"steel":0.5}, "fire": {"fire":0.5,"water":0.5,"grass":2.0,"ice":2.0,"bug":2.0,"rock":0.5,"dragon":0.5,"steel":2.0}, "water": {"fire":2.0,"water":0.5,"grass":0.5,"ground":2.0,"rock":2.0,"dragon":0.5}, "electric": {"water":2.0,"electric":0.5,"grass":0.5,"ground":0,"flying":2.0,"dragon":0.5}, "grass": {"fire":0.5,"water":2.0,"grass":0.5,"poison":0.5,"ground":2.0,"flying":0.5,"bug":0.5,"rock":2.0,"dragon":0.5,"steel":0.5}, "ice": {"fire":0.5,"water":0.5,"grass":2.0,"ice":0.5,"ground":2.0,"flying":2.0,"dragon":2.0,"steel":0.5}, "fighting": {"normal":2.0,"ice":2.0,"poison":0.5,"flying":0.5,"psychic":0.5,"bug":0.5,"rock":2.0,"ghost":0,"dark":2.0,"steel":2.0,"fairy":0.5}, "poison": {"grass":2.0,"poison":0.5,"ground":0.5,"rock":0.5,"ghost":0.5,"steel":0,"fairy":2.0}, "ground": {"fire":2.0,"electric":2.0,"grass":0.5,"poison":2.0,"flying":0,"bug":0.5,"rock":2.0,"steel":2.0}, "flying": {"electric":0.5,"grass":2.0,"fighting":2.0,"bug":2.0,"rock":0.5,"steel":0.5}, "psychic": {"fighting":2.0,"poison":2.0,"psychic":0.5,"dark":0,"steel":0.5}, "bug": {"fire":0.5,"grass":2.0,"fighting":0.5,"poison":0.5,"flying":0.5,"psychic":2.0,"ghost":0.5,"dark":2.0,"steel":0.5,"fairy":0.5}, "rock": {"fire":2.0,"ice":2.0,"fighting":0.5,"ground":0.5,"flying":2.0,"bug":2.0,"steel":0.5}, "ghost": {"normal":0,"psychic":2.0,"ghost":2.0,"dark":0.5}, "dragon": {"dragon":2.0,"steel":0.5,"fairy":0}, "dark": {"fighting":0.5,"psychic":2.0,"ghost":2.0,"dark":0.5,"fairy":0.5}, "steel": {"fire":0.5,"water":0.5,"electric":0.5,"ice":2.0,"rock":2.0,"steel":0.5,"fairy":2.0}, "fairy": {"fire":0.5,"fighting":2.0,"poison":0.5,"dragon":2.0,"dark":2.0,"steel":0.5} };
             
             var mult = 1.0;
             var safeAtkType = String(mData.type).toLowerCase().trim();
             var safeDefType = String(defType).toLowerCase().trim();
-            if (TYPE_CHART[safeAtkType] && TYPE_CHART[safeAtkType][safeDefType] !== undefined) {
-                mult = TYPE_CHART[safeAtkType][safeDefType];
-            }
+            if (TYPE_CHART[safeAtkType] && TYPE_CHART[safeAtkType][safeDefType] !== undefined) mult = TYPE_CHART[safeAtkType][safeDefType];
             if (atkType === mData.type) dmg = Math.floor(dmg * 1.5);
             
             var critRoll = Math.floor(Math.random() * 256);
@@ -1423,7 +1457,7 @@ var Games={
             if (crit) log += " CRITICAL HIT!";
             if (mult>1) log += " Super effective!";
             else if (mult<1) log += " Not very effective...";
-            return { log:log, dmg:dmg, hit:true };
+            return { log:log, dmg:dmg, hit:true, isUtility: false };
         };
         
         var tickStatus = function(state, name) {
@@ -1460,7 +1494,7 @@ var Games={
         var eData = POKEMON_MOVES[eMove.name];
 
         var playerGoesFirst = true;
-        if (!isItemTurn && mData) {
+        if (!isItemTurn && mData && eData) {
             var pPri = mData.priority || 0;
             var ePri = eData.priority || 0;
             var finalPSpd = pStats.spd * (m.pState.status === 'paralyzed' ? 0.5 : 1);
@@ -1475,72 +1509,133 @@ var Games={
 
         var executePlayerTurn = function() {
             if (isItemTurn || m.pCurHp <= 0) return;
-            
             if (m.pState.status==='paralyzed' && Math.random()<0.25) {
                 m.log.unshift(pStats.name + " is paralyzed! It can't move!");
+            } else if (m.pState.status==='asleep') {
+                m.log.unshift(pStats.name + " is fast asleep.");
             } else {
                 var pResult = processHit(pStats.name, eStats.name, pMove.name, mData, pStats.type, eStats.type, true);
-                m.eCurHp -= pResult.dmg;
-                m.log.unshift(pResult.log);
                 
-                var moveType = mData ? mData.type : pStats.type;
-                var typeSoundMap = { 'Fire':'poke_fire','Water':'poke_water','Electric':'poke_electric','Grass':'poke_grass','Psychic':'poke_psychic','Ghost':'poke_psychic','Dark':'poke_psychic','Dragon':'poke_electric','Ice':'poke_water','Rock':'poke_normal','Ground':'poke_normal','Fighting':'poke_normal','Bug':'poke_grass','Flying':'poke_grass','Steel':'poke_normal','Poison':'poke_psychic','Fairy':'poke_psychic','Normal':'poke_normal' };
-                if (typeof playSound === 'function') playSound(typeSoundMap[moveType] || 'poke_normal');
-                
-                if (pResult.dmg > 0) {
-                  var isSuper = pResult.log.indexOf('Super effective') !== -1;
-                  var isCrit  = pResult.log.indexOf('CRITICAL') !== -1;
-                  if (isSuper && typeof playSound === 'function') playSound('poke_super');
-                  if (isCrit && typeof playSound === 'function')  playSound('poke_crit');
-                  self._spawnDmgText(pResult.dmg, 'enemy', isSuper, isCrit);
-                }
-                
-                if (isStruggle && pResult.dmg>0) {
-                    var recoil = Math.max(1,Math.floor(pResult.dmg*0.25));
-                    m.pCurHp -= recoil;
-                    m.log.unshift(pStats.name+" is hit with recoil! ("+recoil+" HP)");
-                }
-                if (pResult.hit && m.eCurHp>0) applyStatus(m.eState, "Enemy "+eStats.name, pMove.name);
-                
-                if (heldItem==='life_orb' && pResult.dmg>0) {
-                    var orbRecoil = Math.max(1, Math.min(100, Math.floor(m.pMaxHp/10)));
-                    m.pCurHp -= orbRecoil;
-                    m.log.unshift("Life Orb hurt " + pStats.name + " for " + orbRecoil + "!");
-                }
-                if (heldItem==='shell_bell' && pResult.dmg>0) {
-                    var sbHeal = Math.max(1, Math.min(60, Math.floor(pResult.dmg/8)));
-                    m.pCurHp = Math.min(m.pMaxHp, m.pCurHp+sbHeal);
-                    m.log.unshift("Shell Bell restored " + sbHeal + " HP!");
+                if (pResult.isUtility) {
+                    m.log.unshift(pResult.log);
+                    if (mData.healMax) {
+                        var healAmt = Math.floor(m.pMaxHp * mData.healMax);
+                        m.pCurHp = Math.min(m.pMaxHp, m.pCurHp + healAmt);
+                        m.log.unshift(pStats.name + " recovered " + healAmt + " HP!");
+                        if (typeof playSound === 'function') playSound('jump');
+                    }
+                    if (mData.buff === 'atk') {
+                        m.pAtkBuff = (m.pAtkBuff || 1.0) + mData.amount;
+                        m.log.unshift(pStats.name + "'s Attack sharply rose!");
+                    }
+                    if (mData.buff === 'def') {
+                        m.pDefBuff = (m.pDefBuff || 1.0) + mData.amount;
+                        m.log.unshift(pStats.name + "'s Defense sharply rose!");
+                    }
+                    if (mData.status && !m.eState.status) {
+                        m.eState.status = mData.status;
+                        m.eState.statusTimer = Math.floor(Math.random() * 3) + 2;
+                        m.log.unshift("Enemy " + eStats.name + " was " + mData.status + "!");
+                    } else if (mData.status && m.eState.status) {
+                        m.log.unshift("It failed!");
+                    }
+                } else {
+                    m.eCurHp -= pResult.dmg;
+                    m.log.unshift(pResult.log);
+                    
+                    var moveType = mData ? mData.type : pStats.type;
+                    var typeSoundMap = { 'Fire':'poke_fire','Water':'poke_water','Electric':'poke_electric','Grass':'poke_grass','Psychic':'poke_psychic','Ghost':'poke_psychic','Dark':'poke_psychic','Dragon':'poke_electric','Ice':'poke_water','Rock':'poke_normal','Ground':'poke_normal','Fighting':'poke_normal','Bug':'poke_grass','Flying':'poke_grass','Steel':'poke_normal','Poison':'poke_psychic','Fairy':'poke_psychic','Normal':'poke_normal' };
+                    if (typeof playSound === 'function') playSound(typeSoundMap[moveType] || 'poke_normal');
+                    
+                    if (pResult.dmg > 0) {
+                      var isSuper = pResult.log.indexOf('Super effective') !== -1;
+                      var isCrit  = pResult.log.indexOf('CRITICAL') !== -1;
+                      if (isSuper && typeof playSound === 'function') playSound('poke_super');
+                      if (isCrit && typeof playSound === 'function')  playSound('poke_crit');
+                      self._spawnDmgText(pResult.dmg, 'enemy', isSuper, isCrit);
+                      
+                      // Drain Effect
+                      if (mData.healDmg) {
+                          var healAmt = Math.floor(pResult.dmg * mData.healDmg);
+                          m.pCurHp = Math.min(m.pMaxHp, m.pCurHp + healAmt);
+                          m.log.unshift(pStats.name + " drained energy!");
+                      }
+                    }
+                    
+                    if (isStruggle && pResult.dmg>0) {
+                        var recoil = Math.max(1,Math.floor(pResult.dmg*0.25));
+                        m.pCurHp -= recoil; m.log.unshift(pStats.name+" is hit with recoil! ("+recoil+" HP)");
+                    }
+                    if (pResult.hit && m.eCurHp>0) applyStatus(m.eState, "Enemy "+eStats.name, pMove.name);
+                    
+                    if (heldItem==='life_orb' && pResult.dmg>0) {
+                        var orbRecoil = Math.max(1, Math.min(100, Math.floor(m.pMaxHp/10)));
+                        m.pCurHp -= orbRecoil; m.log.unshift("Life Orb hurt " + pStats.name + " for " + orbRecoil + "!");
+                    }
+                    if (heldItem==='shell_bell' && pResult.dmg>0) {
+                        var sbHeal = Math.max(1, Math.min(60, Math.floor(pResult.dmg/8)));
+                        m.pCurHp = Math.min(m.pMaxHp, m.pCurHp+sbHeal); m.log.unshift("Shell Bell restored " + sbHeal + " HP!");
+                    }
                 }
             }
         };
 
         var executeEnemyTurn = function() {
             if (m.eCurHp <= 0 || m.pCurHp <= 0) return;
-
             if (m.eState.status==='paralyzed' && Math.random()<0.25) {
                 m.log.unshift("Enemy "+eStats.name+" is paralyzed! It can't move!");
+            } else if (m.eState.status==='asleep') {
+                m.log.unshift("Enemy "+eStats.name+" is fast asleep.");
             } else {
                 if (eMove.pp > 0) eMove.pp = Math.max(0, eMove.pp - ePPCost + 1);
                 var eResult = processHit("Enemy "+eStats.name, pStats.name, eMove.name, eData, eStats.type, pStats.type, false);
-                m.pCurHp -= eResult.dmg;
-                m.log.unshift(eResult.log);
                 
-                if (eResult.dmg > 0) self._spawnDmgText(eResult.dmg, 'player');
-                if (eResult.hit && m.pCurHp>0) applyStatus(m.pState, pStats.name, eMove.name);
-                
-                if (m.pCurHp<=0 && heldItem==='focus_sash') {
-                    m.pCurHp = 1;
-                    delete self.playerData.heldItems[pId];
-                    if (!self.playerData.inventory.heldItems) self.playerData.inventory.heldItems = {};
-                    if ((self.playerData.inventory.heldItems['focus_sash'] || 0) > 0) self.playerData.inventory.heldItems['focus_sash']--;
-                    m.log.unshift("Focus Sash held on! "+pStats.name+" survived with 1 HP!");
-                    if(typeof playSound === 'function') playSound('pb');
-                }
-                if (heldItem==='lum_berry' && m.pState.status) {
-                    m.log.unshift("Lum Berry cured " + pStats.name + "'s " + m.pState.status + "!");
-                    m.pState.status = null;
-                    delete self.playerData.heldItems[pId];
+                if (eResult.isUtility) {
+                    m.log.unshift(eResult.log);
+                    if (eData.healMax) {
+                        var healAmt = Math.floor(m.eMaxHp * eData.healMax);
+                        m.eCurHp = Math.min(m.eMaxHp, m.eCurHp + healAmt);
+                        m.log.unshift("Enemy " + eStats.name + " recovered " + healAmt + " HP!");
+                    }
+                    if (eData.buff === 'atk') {
+                        m.eAtkBuff = (m.eAtkBuff || 1.0) + eData.amount;
+                        m.log.unshift("Enemy " + eStats.name + "'s Attack sharply rose!");
+                    }
+                    if (eData.buff === 'def') {
+                        m.eDefBuff = (m.eDefBuff || 1.0) + eData.amount;
+                        m.log.unshift("Enemy " + eStats.name + "'s Defense sharply rose!");
+                    }
+                    if (eData.status && !m.pState.status) {
+                        m.pState.status = eData.status;
+                        m.pState.statusTimer = Math.floor(Math.random() * 3) + 2;
+                        m.log.unshift(pStats.name + " was " + eData.status + "!");
+                    } else if (eData.status && m.pState.status) {
+                        m.log.unshift("It failed!");
+                    }
+                } else {
+                    m.pCurHp -= eResult.dmg;
+                    m.log.unshift(eResult.log);
+                    
+                    if (eResult.dmg > 0) {
+                        self._spawnDmgText(eResult.dmg, 'player');
+                        if (eData.healDmg) {
+                            var healAmt = Math.floor(eResult.dmg * eData.healDmg);
+                            m.eCurHp = Math.min(m.eMaxHp, m.eCurHp + healAmt);
+                            m.log.unshift("Enemy " + eStats.name + " drained energy!");
+                        }
+                    }
+                    if (eResult.hit && m.pCurHp>0) applyStatus(m.pState, pStats.name, eMove.name);
+                    
+                    if (m.pCurHp<=0 && heldItem==='focus_sash') {
+                        m.pCurHp = 1; delete self.playerData.heldItems[pId];
+                        if ((self.playerData.inventory.heldItems['focus_sash'] || 0) > 0) self.playerData.inventory.heldItems['focus_sash']--;
+                        m.log.unshift("Focus Sash held on! "+pStats.name+" survived with 1 HP!");
+                        if(typeof playSound === 'function') playSound('pb');
+                    }
+                    if (heldItem==='lum_berry' && m.pState.status) {
+                        m.log.unshift("Lum Berry cured " + pStats.name + "'s " + m.pState.status + "!");
+                        m.pState.status = null; delete self.playerData.heldItems[pId];
+                    }
                 }
             }
         };
@@ -1571,6 +1666,24 @@ var Games={
         };
         m.pCurHp = eotDamage(m.pState, m.pMaxHp, m.pCurHp, pStats.name, "");
         m.eCurHp = eotDamage(m.eState, m.eMaxHp, m.eCurHp, eStats.name, "Enemy ");
+        
+        // WEATHER EFFECTS EOT
+        if (m.weather) {
+            if (m.weather === 'sand' || m.weather === 'hail') {
+                if (m.pCurHp > 0 && pStats.type !== 'Rock' && pStats.type !== 'Ground' && pStats.type !== 'Steel' && pStats.type !== 'Ice') {
+                    m.pCurHp -= Math.max(1, Math.floor(m.pMaxHp / 16));
+                }
+                if (m.eCurHp > 0 && eStats.type !== 'Rock' && eStats.type !== 'Ground' && eStats.type !== 'Steel' && eStats.type !== 'Ice') {
+                    m.eCurHp -= Math.max(1, Math.floor(m.eMaxHp / 16));
+                }
+                m.log.unshift("The " + (m.weather==='sand'?"sandstorm":"hail") + " rages!");
+            }
+            m.weatherTimer--;
+            if (m.weatherTimer <= 0) {
+                m.log.unshift("The weather returned to normal.");
+                m.weather = null;
+            }
+        }
         
         if (heldItem==='leftovers' && m.pCurHp>0) {
             var lfHeal = Math.max(1, Math.min(80, Math.floor(m.pMaxHp/16)));
@@ -2843,6 +2956,7 @@ var Games={
 
         var controlsHtml = "<div style='display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:20px; background:rgba(0,0,0,0.4); padding:12px 20px; border-radius:12px; border:1px solid #334155;'>" +
             "<div style='font-weight:900; color:#38BDF8; letter-spacing:1px; text-transform:uppercase;'>Global Trade Station</div>" +
+            "<button onclick='Games[\"Pokemon Play\"]._wonderTradeModal()' style='background:linear-gradient(90deg, #FACC15, #F59E0B); color:#000; border:none; padding:6px 16px; border-radius:100px; font-weight:900; cursor:pointer; font-family:Google Sans; box-shadow:0 0 10px rgba(250,204,21,0.4); margin-left:16px;'>🔄 WONDER TRADE</button>" +
             "<div style='display:flex; gap:12px;'>" +
                 "<select onchange='Games[\"Pokemon Play\"].gtsFilter=this.value; Games[\"Pokemon Play\"]._renderGTSListings()' style='background:#1E293B; color:#FFF; border:1px solid #475569; border-radius:6px; padding:6px 12px; outline:none; font-weight:bold; cursor:pointer;'>" +
                     "<option value='all' "+(this.gtsFilter==='all'?'selected':'')+">🌟 All Rarities</option>" +
@@ -3119,7 +3233,47 @@ var Games={
             if(typeof playSound === 'function') playSound('crash');
             if(typeof showToast === 'function') showToast('❌ Server Error: ' + err.message); 
         }).createGTSListing(id, myData.lvl, myData.shiny, startingBid, buyoutPrice, cardNature);
-    }
+    },
+
+    _wonderTradeModal: function() {
+        var html = "<div id='wtModal' style='position:absolute; inset:0; background:rgba(0,0,0,0.85); z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center; backdrop-filter:blur(4px);'>" +
+           "<div style='background:#1E293B; border:4px solid #FACC15; border-radius:16px; padding:32px; text-align:center; max-width:400px; width:90%; box-shadow:0 15px 40px rgba(0,0,0,0.6); animation:popIn 0.3s ease-out;'>" +
+           "<h2 style='color:#FFF; font-family:Google Sans; margin:0 0 16px 0; letter-spacing:1px;'>🔄 WONDER TRADE</h2>" +
+           "<div style='color:#94A3B8; font-weight:bold; margin-bottom:24px;'>Offer a Pokémon to the global network. You will instantly receive a random Pokémon deposited by someone else in the world!<br><br>Type the ID of the Pokémon you want to trade:</div>" +
+           "<input type='number' id='wtInput' placeholder='Pokemon ID...' style='width:100%; padding:12px; border-radius:8px; border:2px solid #334155; background:#0F172A; color:#4ADE80; font-size:16px; font-weight:bold; box-sizing:border-box; outline:none; text-align:center; margin-bottom:20px;'>" +
+           "<div style='display:flex; gap:12px; justify-content:center;'><button onclick='document.getElementById(\"wtModal\").remove()' style='flex:1; background:#334155; color:#FFF; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; cursor:pointer; font-family:Google Sans;'>CANCEL</button><button onclick='Games[\"Pokemon Play\"]._confirmWonderTrade()' style='flex:1; background:#FACC15; color:#000; border:none; padding:12px 24px; border-radius:8px; font-weight:900; cursor:pointer; box-shadow:0 4px 10px rgba(250, 204, 21, 0.4); font-family:Google Sans;'>TRADE NOW</button></div></div></div>";
+        domEngine.innerHTML += html;
+    },
+
+    _confirmWonderTrade: function() {
+        var id = parseInt(document.getElementById('wtInput').value);
+        if (!id || !this.playerData.cards[id]) { 
+            if(typeof showToast === 'function') showToast('❌ You don\'t own that Pokémon ID!'); 
+            if(typeof playSound === 'function') playSound('crash'); return; 
+        }
+        if (this.playerData.squad.indexOf(id) !== -1) { 
+            if(typeof showToast === 'function') showToast('❌ Unequip it from your squad first!'); 
+            if(typeof playSound === 'function') playSound('crash'); return; 
+        }
+        
+        var oldLvl = this.playerData.cards[id].lvl;
+        delete this.playerData.cards[id];
+        
+        var newId = this._rollGachaId('base');
+        var isShiny = Math.random() > 0.95; // 5% base shiny chance from Wonder Trade!
+        var natureList = ['Hardy', 'Adamant', 'Bold', 'Brave', 'Relaxed'];
+        
+        this.playerData.cards[newId] = { lvl: Math.max(1, oldLvl + (Math.floor(Math.random()*5)-2)), exp: 0, shiny: isShiny, ot: "Wonder Trade", nature: natureList[Math.floor(Math.random() * 5)] };
+        
+        document.getElementById('wtModal').remove();
+        if(typeof playSound === 'function') playSound('win');
+        if(typeof launchConfetti === 'function') launchConfetti();
+        if(typeof showToast === 'function') showToast('🔄 Wonder Trade Complete! Check your binder!');
+        
+        this.saveData(0);
+        this.renderHub();
+    },
+
   },
 
   'Cafe Tycoon': {
@@ -11660,21 +11814,27 @@ function loadHallOfFame(sortType = 'xp') {
 }
   
 function buildPodiumStep(user, rank, unit) {
-  var tier = getTierInfo(user.xp);
   var cls = rank===1 ? 'podium-1' : rank===2 ? 'podium-2' : 'podium-3';
-  var crown = rank===1 ? '<div class="podium-crown">👑</div>' : '';
   let safeUnit = unit || 'XP';
   
-  // Calculate their exact Level
   var lvl = Math.floor(Math.sqrt((user.xp || user.score || 0) / 1500)) + 1;
+  var rankBadge = rank === 1 ? '1ST' : rank === 2 ? '2ND' : '3RD';
   
+  var rankColor = rank === 1 ? '#FFD700' : rank === 2 ? '#E2E8F0' : '#F59E0B';
+  var rankShadow = rank === 1 ? '0 2px 10px rgba(255,215,0,0.4)' : '0 2px 8px rgba(0,0,0,0.5)';
+  var badgeSize = rank === 1 ? '32px' : '24px';
+
   return `<div class="podium-step ${cls}">
-            ${crown}
-            <div class="podium-name">${user.tag ? '<span style="color:#FFFDE4; opacity:0.8; font-size:11px;">['+user.tag+']</span><br>' : ''}${user.ldap}</div>
-            <div class="podium-avatar ${tier.cls}" style="overflow:hidden; padding:0;">${getMomaAvatar(user.ldap)}</div>
+            <div class="podium-name">${user.tag ? '<span style="color:#FFFDE4; opacity:0.6; font-size:10px; letter-spacing:1px;">['+user.tag+']</span><br>' : ''}${user.ldap}</div>
+            <div class="podium-avatar" style="padding:0;">${getMomaAvatar(user.ldap)}</div>
             <div class="podium-block">
-              <div style="font-size:13px; font-weight:900; color:rgba(255,255,255,0.9); margin-bottom:4px; letter-spacing:0.5px;">Lv. ${lvl}</div>
-              <div class="podium-score">${user.score.toLocaleString()} ${safeUnit}</div>
+              <div style="font-size:${badgeSize}; font-weight:900; color:${rankColor}; text-shadow:${rankShadow}; font-family:'Google Sans Display', sans-serif; letter-spacing:2px;">${rankBadge}</div>
+              
+              <div style="width: 30px; height: 2px; background: ${rankColor}; opacity: 0.4; margin: 10px 0; border-radius: 2px;"></div>
+              
+              <div style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.8); letter-spacing:1px; text-transform:uppercase;">Lv. ${lvl}</div>
+              <div class="podium-score">${user.score.toLocaleString()}</div>
+              <div style="font-size:10px; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:1.5px;">${safeUnit}</div>
             </div>
           </div>`;
 }
@@ -11704,67 +11864,72 @@ function openProfile(){
 
     var earned=new Set((stats.achievements||[]).map(a=>a.id)), bestEntries=Object.entries(stats.bests||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);
     var favGame=stats.favoriteGame, favIconRaw=favGame&&Games[favGame]?Games[favGame].icon:'🎮';
-    
-    // Check if the favorite icon is a URL or an emoji
     var favIconHtml = favIconRaw.startsWith('http') ? `<img src="${favIconRaw}" style="width:48px;height:48px;border-radius:12px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.2);">` : `<div style="font-size:32px;">${favIconRaw}</div>`;
 
-    // Calculate RPG Level Progress using the new XP column
     let currentXP = stats.xp || 0;
     let playerLvl = Math.floor(Math.sqrt(currentXP / 1500)) + 1;
     let prevLvlPts = Math.pow(playerLvl - 1, 2) * 1500;
     let nextLvlPts = Math.pow(playerLvl, 2) * 1500;
     let expProgress = ((currentXP - prevLvlPts) / (nextLvlPts - prevLvlPts)) * 100;
 
-    // Calculate Performance Buff UI
     let cVal = parseFloat(stats.csat) || 0;
     let aVal = parseFloat(stats.attendance) || 0;
-    
-    // Sheets formula fix: Convert decimals to whole percentages
     if (cVal > 0 && cVal <= 1.0) cVal = cVal * 100;
     if (aVal > 0 && aVal <= 1.0) aVal = aVal * 100;
 
-    let cBuff = cVal >= 95 ? '+0.5x' : (cVal >= 90 ? '+0.25x' : '+0.0x');
-    let aBuff = aVal >= 100 ? '+0.5x' : (aVal >= 95 ? '+0.25x' : '+0.0x');
-    
     let totalMult = 1.0;
     if (cVal >= 95) totalMult += 0.5; else if (cVal >= 90) totalMult += 0.25;
     if (aVal >= 100) totalMult += 0.5; else if (aVal >= 95) totalMult += 0.25;
     
-    // Format the display to 1 decimal place (e.g., 82.1%)
     let displayCsat = stats.csat !== '' ? cVal.toFixed(1) + '%' : 'No Data';
     let displayAtt = stats.attendance !== '' ? aVal.toFixed(1) + '%' : 'No Data';
 
-    let buffUI = totalMult > 1.0 
-      ? `<div style="background:var(--play-green-light); color:var(--play-green); border:1px solid var(--play-green); padding:8px; border-radius:8px; text-align:center; font-weight:bold; margin-top:8px;">🔥 Active Multiplier: ${totalMult}x XP & Pts!</div>`
-      : `<div style="background:var(--surface-2); color:var(--text-muted); padding:8px; border-radius:8px; text-align:center; font-size:11px; margin-top:8px;">Base 1.0x Multiplier Active.<br>Score 90%+ CSAT & 95%+ Attendance to boost!</div>`;
-
+    // ─── MINI-BENTO GRID LAYOUT ───
     var html = `
-      <div class="drawer-section">
-        <div class="drawer-section-title">🌟 Player Progression</div>
-        <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px;">
-           <div class="level-ring" style="width:48px; height:48px; font-size:22px; flex-shrink:0; box-shadow:0 4px 10px rgba(1,135,95,0.4);">${playerLvl}</div>
-           <div style="flex:1;">
-              <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; font-weight:bold; color:var(--text-main);">
-                 <span>Level ${playerLvl}</span>
-                 <span style="color:var(--play-green);">${currentXP.toLocaleString()} / ${nextLvlPts.toLocaleString()} XP</span>
+      <div class="profile-bento-grid">
+        <div class="profile-bento-card" style="grid-column: 1 / -1; background: linear-gradient(135deg, rgba(66, 133, 244, 0.1), rgba(124, 77, 255, 0.1)); border-color: rgba(124, 77, 255, 0.3);">
+           <div style="display:flex; align-items:center; gap:16px;">
+              <div class="level-ring" style="width:48px; height:48px; font-size:22px; flex-shrink:0; box-shadow:0 4px 10px rgba(124,77,255,0.4); border-color: #7c4dff; color: #7c4dff;">${playerLvl}</div>
+              <div style="flex:1;">
+                 <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; font-weight:bold; color:var(--text-main);">
+                    <span>Level ${playerLvl}</span>
+                    <span style="color:#7c4dff;">${currentXP.toLocaleString()} / ${nextLvlPts.toLocaleString()} XP</span>
+                 </div>
+                 <div class="exp-bar-bg" style="width:100%; height:8px; background: rgba(0,0,0,0.2);"><div class="exp-bar-fill" style="width:${Math.max(0, Math.min(100, expProgress))}%; background: linear-gradient(90deg, #4285F4, #7c4dff);"></div></div>
               </div>
-              <div class="exp-bar-bg" style="width:100%; height:8px;"><div class="exp-bar-fill" style="width:${Math.max(0, Math.min(100, expProgress))}%"></div></div>
            </div>
         </div>
-        
-        <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px;">
-           <div style="font-size:10px; font-weight:900; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Real-World Performance</div>
-           <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>CSAT: <b>${displayCsat}</b></span> <span style="color:var(--play-green); font-weight:bold;">${cBuff}</span></div>
-           <div style="display:flex; justify-content:space-between; font-size:13px;"><span>Attendance: <b>${displayAtt}</b></span> <span style="color:var(--play-green); font-weight:bold;">${aBuff}</span></div>
-           ${buffUI}
+
+        <div class="profile-bento-card">
+           <div style="font-size:10px; font-weight:900; color:var(--text-muted); text-transform:uppercase; margin-bottom:12px; letter-spacing:1px;">🕹️ Arcade Stats</div>
+           <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+              <span style="font-size:12px; color:var(--text-main);">Games Played</span>
+              <span style="font-size:14px; font-weight:900;">${stats.gamesPlayed}</span>
+           </div>
+           <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+              <span style="font-size:12px; color:var(--text-main);">Total Score</span>
+              <span style="font-size:14px; font-weight:900; color:#4ADE80;">${stats.totalScore.toLocaleString()}</span>
+           </div>
+           <div style="display:flex; justify-content:space-between;">
+              <span style="font-size:12px; color:var(--text-main);">Games Tried</span>
+              <span style="font-size:14px; font-weight:900;">${Object.keys(stats.bests||{}).length}</span>
+           </div>
         </div>
-      </div>
-      <div class="drawer-section">
-        <div class="drawer-section-title">📊 Your Stats</div>
-        <div class="stat-grid">
-          <div class="stat-box"><div class="stat-box-val">${stats.gamesPlayed}</div><div class="stat-box-lbl">Games Played</div></div>
-          <div class="stat-box"><div class="stat-box-val">${stats.totalScore.toLocaleString()}</div><div class="stat-box-lbl">Total Score</div></div>
-          <div class="stat-box"><div class="stat-box-val">${Object.keys(stats.bests||{}).length}</div><div class="stat-box-lbl">Games Tried</div></div>
+
+        <div class="profile-bento-card">
+           <div style="font-size:10px; font-weight:900; color:var(--text-muted); text-transform:uppercase; margin-bottom:12px; letter-spacing:1px;">💼 Work Metrics</div>
+           <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+              <span style="font-size:12px; color:var(--text-main);">CSAT</span>
+              <span style="font-size:14px; font-weight:900; color:${cVal >= 90 ? '#4ADE80' : 'var(--text-main)'};">${displayCsat}</span>
+           </div>
+           <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+              <span style="font-size:12px; color:var(--text-main);">Attendance</span>
+              <span style="font-size:14px; font-weight:900; color:${aVal >= 95 ? '#4ADE80' : 'var(--text-main)'};">${displayAtt}</span>
+           </div>
+           <div style="display:flex; justify-content:space-between;">
+              <span style="font-size:12px; color:var(--text-main);">Active Buff</span>
+              <span style="font-size:13px; font-weight:900; color:${totalMult > 1.0 ? '#FACC15' : 'var(--text-muted)'}; text-shadow:${totalMult > 1.0 ? '0 0 10px rgba(250,204,21,0.5)' : 'none'};">${totalMult}x XP</span>
+           </div>
         </div>
       </div>
     `;
@@ -11773,7 +11938,6 @@ function openProfile(){
     
     if(bestEntries.length>0) html+=`<div class="drawer-section"><div class="drawer-section-title">🏆 Personal Bests</div>${bestEntries.map(e=>{
        let ic = Games[e[0]] ? Games[e[0]].icon : '🎮';
-       // Render URL as an image tag, or print the text emoji
        let iconRender = ic.startsWith('http') ? `<img src="${ic}" style="width:24px;height:24px;border-radius:6px;object-fit:cover;">` : `<span style="font-size:18px;">${ic}</span>`;
        return `<div class="best-row"><div class="best-game" style="display:flex;align-items:center;gap:10px;">${iconRender} <span>${e[0]}</span></div><div class="best-score">${e[1].toLocaleString()}</div></div>`;
     }).join('')}</div>`;
@@ -12362,17 +12526,28 @@ function openAppSheet(name){
     return;
   }
 
-  // Fix: Handle Image URLs vs standard Emojis
+  // Fix: Handle Image URLs vs standard Emojis & Update Drawer Banner
   var iconEl = document.getElementById('bsIcon');
+  var bannerEl = document.getElementById('drawerGameBanner');
+  
   if (game.icon && game.icon.startsWith('http')) {
      iconEl.textContent = '';
      iconEl.style.backgroundImage = 'url("' + game.icon + '")';
      iconEl.style.backgroundSize = 'cover';
      iconEl.style.backgroundPosition = 'center';
+     if(bannerEl) { 
+         bannerEl.style.backgroundImage = 'url("' + game.icon + '")'; 
+         bannerEl.style.filter = 'blur(8px) brightness(0.6)'; 
+     }
   } else {
      iconEl.textContent = game.icon;
      iconEl.style.backgroundImage = 'none';
-     iconEl.style.background = GAME_BG[name]||'#f1f3f4';
+     iconEl.style.background = GAME_BG[name]||'#1E293B';
+     if(bannerEl) { 
+         bannerEl.style.backgroundImage = 'none'; 
+         bannerEl.style.background = GAME_BG[name]||'#1E293B'; 
+         bannerEl.style.filter = 'none'; 
+     }
   }
   
   document.getElementById('bsTitle').textContent=name; 
@@ -12783,5 +12958,70 @@ document.addEventListener('visibilitychange', function() {
      showToast('⏸ Game auto-paused while you were away.');
   }
 });
+
+// --- MOCK AD / CORPORATE PSA SYSTEM ---
+function loadRandomAds() {
+  const adSlots = document.querySelectorAll('.mock-ad-slot');
+  if (!adSlots || adSlots.length === 0) return;
+
+  const ads = [
+    {
+      icon: '🚨', title: 'WFM Aux Police', text: 'Are you really on a Bio Break? Keep your aux times valid. The Workforce team is watching.', sponsor: 'Sponsored by WFM', 
+      bg: 'linear-gradient(135deg, #450a0a 0%, #172554 100%)', border: 'rgba(239, 68, 68, 0.4)', textCol: '#F8FAFC', btnText: 'Stay Compliant'
+    },
+    {
+      icon: '🧪', title: 'QA Empathy Boost™', text: 'Dropping CSAT? Remember to acknowledge and align with your customers today.', sponsor: 'Promoted by Quality Assurance', 
+      bg: 'linear-gradient(135deg, #064E3B 0%, #14532D 100%)', border: 'rgba(52, 211, 153, 0.5)', textCol: '#F8FAFC', btnText: 'Level Up QA'
+    },
+    {
+      icon: '🔒', title: 'System Glitch?', text: 'Walked away without locking your PC? That is how you get hacked. Win + L saves lives.', sponsor: 'Ad • IT Security', 
+      bg: 'linear-gradient(135deg, #022C22 0%, #000000 100%)', border: 'rgba(16, 185, 129, 0.5)', textCol: '#4ADE80', btnText: 'Lock It Down'
+    },
+    {
+      icon: '🏎️', title: 'AHT Speedrun', text: 'Struggling with Average Handle Time? Stop over-explaining. Get straight to the resolution and set a new PB!', sponsor: 'Sponsored by Floor Support', 
+      bg: 'linear-gradient(135deg, #7F1D1D 0%, #431407 100%)', border: 'rgba(248, 113, 113, 0.4)', textCol: '#FFF', btnText: 'Speed Up'
+    },
+    {
+      icon: '💧', title: 'Wellness Check', text: 'Posture check. Unclench your jaw. Drink some water. You are a human, not a robot.', sponsor: 'Ad • Employee Health', 
+      bg: 'linear-gradient(135deg, #E0F2FE 0%, #E0E7FF 100%)', border: 'rgba(186, 230, 253, 0.8)', textCol: '#0F172A', btnText: 'Take a Breath'
+    },
+    {
+      icon: '💔', title: 'Temptation Island?', text: 'Workplace romances are tricky. Cheating on your partner with a teammate? That is an HR nightmare waiting to happen. Keep it professional.', sponsor: 'Ad • Floor Gossip & HR', 
+      bg: 'linear-gradient(135deg, #4c0519 0%, #000000 100%)', border: 'rgba(244, 63, 94, 0.5)', textCol: '#FDA4AF', btnText: 'Stay Loyal'
+    },
+    {
+      icon: '🛡️', title: 'Anti-Cheat Enabled', text: 'Cherry-picking easy tickets, avoiding hard calls, or manipulating surveys? The system logs everything. Stat-padding leads to account bans.', sponsor: 'Promoted by Ops Integrity', 
+      bg: 'linear-gradient(135deg, #3B0764 0%, #000000 100%)', border: 'rgba(168, 85, 247, 0.5)', textCol: '#D8B4FE', btnText: 'Play Fair'
+    },
+    {
+      icon: '💳', title: 'Timecard Fraud Alert', text: 'Padding your timesheet or having a work bestie badge you in? That is an instant Game Over. Keep your swipes and logs honest.', sponsor: 'Sponsored by Payroll', 
+      bg: 'linear-gradient(135deg, #78350F 0%, #000000 100%)', border: 'rgba(245, 158, 11, 0.5)', textCol: '#FCD34D', btnText: 'Log Honestly'
+    }
+  ];
+
+  // Shuffle the ads array so they appear in a random order
+  const shuffledAds = ads.sort(() => 0.5 - Math.random());
+
+  // Inject a different ad into each slot
+  adSlots.forEach((slot, index) => {
+    const randomAd = shuffledAds[index % shuffledAds.length];
+    
+    slot.innerHTML = `
+      <div class="mock-ad-banner" style="background: ${randomAd.bg}; border: 1px solid ${randomAd.border}; color: ${randomAd.textCol};">
+        <div class="mock-ad-badge">Ad</div>
+        <div class="mock-ad-icon">${randomAd.icon}</div>
+        <div class="mock-ad-content">
+          <div class="mock-ad-title">${randomAd.title}</div>
+          <div class="mock-ad-text">${randomAd.text}</div>
+          <div class="mock-ad-sponsor">${randomAd.sponsor}</div>
+        </div>
+        <button class="mock-ad-btn" onclick="alert('Good job acknowledging the PSA! Now back to work.')">${randomAd.btnText}</button>
+      </div>
+    `;
+  });
+}
+
+// Ensure the ads load when the page initializes
+document.addEventListener('DOMContentLoaded', loadRandomAds);
 
 </script>
