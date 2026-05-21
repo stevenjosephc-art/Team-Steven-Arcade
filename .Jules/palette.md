@@ -1,3 +1,7 @@
 ## 2026-05-10 - Enhancing Accessibility in Google Apps Script Applications
 **Learning:** In projects using non-semantic elements (like `div`) as interactive components, accessibility is often overlooked. These elements must be explicitly given `role="button"` and `tabindex="0"` to be discoverable by assistive technologies and keyboard users. Additionally, global listeners for 'Enter' and 'Space' keys are necessary as `div` elements do not trigger `click` events on key presses by default.
 **Action:** Always check for interactive non-button elements and ensure they have proper ARIA roles, focusability, and keyboard support. For icon-only buttons, descriptive `aria-label` attributes are a must.
+
+## 2026-05-21 - ARIA Tab Panel Pattern and Roving Tabindex
+**Learning:** When implementing navigation systems with non-semantic elements (like `div`), following the ARIA Tab Panel pattern is critical for screen reader compatibility. A roving tabindex (where only the active tab has `tabindex="0"`) allows keyboard users to enter the tablist and then use arrow keys to navigate between tabs, preventing "tab trap" fatigue in large navigation menus. Additionally, ensure that `aria-selected` and focus states are synchronized in the JavaScript logic.
+**Action:** Use `role="tablist"`, `role="tab"`, and `role="tabpanel"`. Manage `tabindex` dynamically: `0` for active, `-1` for inactive. Implement arrow key listeners for tab switching.
