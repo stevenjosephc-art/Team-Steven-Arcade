@@ -428,20 +428,18 @@ function toggleTheme(){var h=document.documentElement; h.setAttribute('data-them
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function showTab(id,elId){
-  // Security check: Bounce if locked
-  if (elId && document.getElementById(elId) && document.getElementById(elId).classList.contains('locked')) { 
-      showToast('🔒 ' + document.getElementById(elId).innerText); 
-      return; 
+  if (elId && document.getElementById(elId)?.classList.contains('locked')) {
+      showToast('🔒 ' + document.getElementById(elId).innerText); return;
   }
-
   document.querySelectorAll('.container').forEach(c=>c.classList.remove('active')); 
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); 
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.classList.remove('active'); t.setAttribute('aria-selected','false'); t.tabIndex=-1;
+  });
   document.getElementById(id).classList.add('active');
-  
   if(elId) {
-    let el = document.getElementById(elId);
-    el.classList.add('active');
-    updateTabIndicator(el); // Slides the visual indicator!
+    let el = document.getElementById(elId); el.classList.add('active');
+    el.setAttribute('aria-selected','true'); el.tabIndex=0;
+    updateTabIndicator(el);
   }
   
   if(id==='topCharts')loadLeaderboard();
@@ -463,13 +461,18 @@ var konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', '
 var konamiPos = 0;
 
 window.addEventListener('keydown', e => {
-  // --- QoL: KEYBOARD ACCESSIBILITY FOR ROLE="BUTTON" ---
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute('role') === 'button') {
-      e.preventDefault();
-      e.target.click();
+  const role = e.target.getAttribute?.('role');
+  if ((e.key === 'Enter' || e.key === ' ') && (role === 'button' || role === 'tab')) {
+      e.preventDefault(); e.target.click();
   }
-
-  // --- QoL: UNIVERSAL HOTKEYS ---
+  if (role === 'tab' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+    const tabs = Array.from(e.target.closest('[role="tablist"]').querySelectorAll('[role="tab"]:not(.locked)'));
+    const idx = tabs.indexOf(e.target);
+    if (idx !== -1) {
+      const next = (idx + (['ArrowRight','ArrowDown'].includes(e.key)?1:-1) + tabs.length) % tabs.length;
+      tabs[next].focus();
+    }
+  }
   if (e.key === 'Escape') {
       closeModal('settingsModal'); closeModal('feedbackModal'); closeModal('adminModal'); 
       closeModal('workReminderModal'); closeModal('appSheetOverlay'); closeVvipModal();

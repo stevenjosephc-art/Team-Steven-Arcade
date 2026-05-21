@@ -68,18 +68,18 @@
   </div>
 </header>
 
-<div class="tabs">
-  <div class="tab-indicator" id="tabIndicator"></div> <div class="tab active" id="tab-all" onclick="filterCategory('All',this)">For you</div>
-  <div class="tab" id="tab-arcade" onclick="filterCategory('Arcade',this)">Arcade Action</div>
-  <div class="tab" id="tab-puzzle" onclick="filterCategory('Puzzle',this)">Brain &amp; Logic</div>
-  <div class="tab" id="tab-card" onclick="filterCategory('Card',this)">Card Games</div>
-  <div class="tab" id="tab-hof" onclick="showTab('hallOfFame','tab-hof'); loadHallOfFame();">Hall of Fame</div>
-  <div class="tab" id="tab-charts" onclick="showTab('topCharts','tab-charts')">Top Charts</div>
-  <div class="tab" id="tab-store" onclick="showTab('storePage','tab-store');">Rewards Store</div>
-  <div class="tab" id="tab-casino" onclick="showTab('casinoPage','tab-casino');" style="color: #E94560; font-weight: 700;">🎰 Vegas Casino</div>
+<div class="tabs" role="tablist" aria-label="Arcade categories">
+  <div class="tab-indicator" id="tabIndicator"></div> <div class="tab active" id="tab-all" onclick="filterCategory('All',this)" role="tab" aria-selected="true" tabindex="0">For you</div>
+  <div class="tab" id="tab-arcade" onclick="filterCategory('Arcade',this)" role="tab" aria-selected="false" tabindex="-1">Arcade Action</div>
+  <div class="tab" id="tab-puzzle" onclick="filterCategory('Puzzle',this)" role="tab" aria-selected="false" tabindex="-1">Brain &amp; Logic</div>
+  <div class="tab" id="tab-card" onclick="filterCategory('Card',this)" role="tab" aria-selected="false" tabindex="-1">Card Games</div>
+  <div class="tab" id="tab-hof" onclick="showTab('hallOfFame','tab-hof'); loadHallOfFame();" role="tab" aria-selected="false" tabindex="-1">Hall of Fame</div>
+  <div class="tab" id="tab-charts" onclick="showTab('topCharts','tab-charts')" role="tab" aria-selected="false" tabindex="-1">Top Charts</div>
+  <div class="tab" id="tab-store" onclick="showTab('storePage','tab-store');" role="tab" aria-selected="false" tabindex="-1">Rewards Store</div>
+  <div class="tab" id="tab-casino" onclick="showTab('casinoPage','tab-casino');" style="color: #E94560; font-weight: 700;" role="tab" aria-selected="false" tabindex="-1">🎰 Vegas Casino</div>
 </div>
 
-<div id="storeFront" class="container active">
+<div id="storeFront" class="container active" role="tabpanel" tabindex="0">
   <div class="carousel-container" id="hive-carousel">
     <div class="carousel-wrapper" id="carousel-wrapper"></div>
     
@@ -98,7 +98,7 @@
   <div class="empty-state" id="emptySearch"><div class="empty-state-emoji">🕹️</div><h3>No games found</h3><p>Try a different search term</p></div>
 </div>
 
-<div id="hallOfFame" class="container">
+<div id="hallOfFame" class="container" role="tabpanel" tabindex="0">
   <div class="lb-controls">
     <h2 class="lb-title">👑 Hall of Fame</h2>
     <div class="lb-filters">
@@ -115,7 +115,7 @@
   <div id="hofListContent"></div>
 </div>
 
-<div id="topCharts" class="container">
+<div id="topCharts" class="container" role="tabpanel" tabindex="0">
   <div class="lb-controls">
     <h2 class="lb-title">🏆 Top Charts</h2>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
@@ -132,7 +132,7 @@
   <div class="lb-card" id="leaderboardList"><div class="lb-row"><span style="color:var(--text-muted);font-size:14px;">Loading charts…</span></div></div>
 </div>
 
-<div id="storePage" class="container">
+<div id="storePage" class="container" role="tabpanel" tabindex="0">
   <div class="lb-controls" style="margin-bottom:12px;">
     <h2 class="lb-title">🎟️ Rewards Store</h2>
   </div>
@@ -264,7 +264,7 @@
       </div>
 </div>
 
-<div id="casinoPage" class="container" style="background: radial-gradient(ellipse at 50% 0%, #2a2416 0%, #050505 100%); border: 1px solid #3a2e15; border-radius: 24px; padding: 40px; margin-top: 20px; margin-bottom: 40px; box-shadow: 0 25px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; overflow: hidden;">
+<div id="casinoPage" class="container" style="background: radial-gradient(ellipse at 50% 0%, #2a2416 0%, #050505 100%); border: 1px solid #3a2e15; border-radius: 24px; padding: 40px; margin-top: 20px; margin-bottom: 40px; box-shadow: 0 25px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; overflow: hidden;" role="tabpanel" tabindex="0">
   
   <div style="position: absolute; inset: 0; background: url('data:image/svg+xml;utf8,<svg width=%2260%22 height=%2260%22 xmlns=%22http://www.w3.org/2000/svg%22><path d=%22M30 0L60 30L30 60L0 30Z%22 fill=%22none%22 stroke=%22%23D4AF37%22 stroke-width=%220.5%22 stroke-opacity=%220.03%22/></svg>'); z-index: 0;"></div>
 
