@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.0.10"; // CHANGE THIS NUMBER EVERY TIME YOU DEPLOY AN UPDATE!
+const APP_VERSION = "v2.0.12"; // CHANGE THIS NUMBER EVERY TIME YOU DEPLOY AN UPDATE!
 const SPREADSHEET_ID = '15CCGEz8Btj4iSWb7k46XO4Bg_j-e61eNNL7uviaEO_4'; // Replace with actual ID or use getActiveSpreadsheet() if bound
 const EXCHANGE_RATE = 500000; // 500,000 points = 1 Ticket
 
