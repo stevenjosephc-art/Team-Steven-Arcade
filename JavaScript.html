@@ -18,12 +18,12 @@ let carouselInterval;
 let currentBGM = null;
 // --- LOBBY RADIO STATION ---
 let lobbyPlaylist = [
-  "https://docs.google.com/uc?export=open&id=1GeD8SV9CHLXMxk4lk2s2VU_5ESxxOlpr", // Track 0: User Requested BGM
+  "https://drive.google.com/uc?id=1GeD8SV9CHLXMxk4lk2s2VU_5ESxxOlpr&export=download", // Track 0: User Requested BGM
   "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3", // Track 1: Upbeat Future Bass
   "https://cdn.pixabay.com/audio/2022/10/18/audio_31c2730ebb.mp3", // Track 2: Pop Dance
   "https://cdn.pixabay.com/audio/2022/03/23/audio_03d922bb7c.mp3"  // Track 3: Synthwave Pop
 ];
-let currentLobbyTrack = Math.floor(Math.random() * lobbyPlaylist.length); // Start on a random song
+let currentLobbyTrack = 0; // Always start with the user's requested BGM
 // ---------------------------
 let activeThemeName = 'light';
 let hasInteracted = false; // To bypass browser audio autoplay blocks
@@ -232,10 +232,21 @@ function playBGM(trackId) {
     let newTrack = document.getElementById(trackId);
     if (newTrack) {
       // If entering the lobby and no song is loaded, load the current playlist track
-      if (trackId === 'bgmLobby' && !newTrack.src) {
+      if (trackId === 'bgmLobby' && (!newTrack.getAttribute('src'))) {
          newTrack.src = lobbyPlaylist[currentLobbyTrack];
       }
       newTrack.volume = masterVolume * 0.25; // Keep BGM subtle!
+
+      // Auto-skip if a track fails to load (common with Drive permission issues)
+      newTrack.onerror = () => {
+        if (trackId === 'bgmLobby') {
+          console.warn("Lobby track failed, skipping...");
+          currentLobbyTrack = (currentLobbyTrack + 1) % lobbyPlaylist.length;
+          newTrack.src = lobbyPlaylist[currentLobbyTrack];
+          newTrack.play().catch(e => {});
+        }
+      };
+
       newTrack.play().catch(e => console.log('Audio autoplay prevented.'));
     }
   }
@@ -12412,6 +12423,15 @@ function initApp() {
     lobbyAudio.addEventListener('ended', function() {
       currentLobbyTrack = (currentLobbyTrack + 1) % lobbyPlaylist.length;
       this.src = lobbyPlaylist[currentLobbyTrack];
+
+      // Re-bind error handler for the new track
+      this.onerror = () => {
+        console.warn("Lobby track failed, skipping...");
+        currentLobbyTrack = (currentLobbyTrack + 1) % lobbyPlaylist.length;
+        this.src = lobbyPlaylist[currentLobbyTrack];
+        this.play().catch(e => {});
+      };
+
       this.play().catch(e => {});
     });
   }
