@@ -1,7 +1,7 @@
   <!DOCTYPE html>
   <html lang="en" data-theme="light">
   <head>
-    <?!= include('stylesheet'); ?>
+    <?!= include('Stylesheet'); ?>
     <base target="_top">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
     <title>Google Play Arcade</title>
@@ -78,16 +78,13 @@
   </div>
 
   <div id="storeFront" class="container active">
-
+    
     <!-- Professional Carousel -->
     <div class="carousel-container" id="hive-carousel">
       <div class="carousel-wrapper" id="carousel-wrapper"></div>
       <button class="carousel-btn prev-btn" onclick="prevCarouselSlide()" aria-label="Previous slide">&#10094;</button>
       <button class="carousel-btn next-btn" onclick="nextCarouselSlide()" aria-label="Next slide">&#10095;</button>
     </div>
-
-    <!-- Seasonal / Promotion Banner (Populated via JS) -->
-    <div id="heroBanner" class="hero-banner"></div>
 
     <!-- Daily Bounties Bento Grid -->
     <div id="bountyCard" class="bounty-card-container">
@@ -154,28 +151,6 @@
     </div>
     <div class="empty-state" id="emptySearch"><div class="empty-state-emoji">🕹️</div><h3>No games found</h3><p>Try a different search term</p></div>
   </div>
-
-  <footer id="globalFooter">
-    <div class="footer-logo">
-      <svg width="24" height="24" viewBox="0 0 1024 1024">
-        <path fill="#34A853" d="M136.5,887.6C126.8,877,122,860.5,122,840.1V183.9c0-20.4,4.8-36.9,14.5-47.5l456,456L136.5,887.6z"/>
-        <path fill="#FBBC04" d="M759,625.6l-166.5-166.5L592.5,459L759,292.4l156.4,88.9c48.2,27.4,48.2,72.4,0,99.8L759,625.6z"/>
-        <path fill="#EA4335" d="M136.5,136.4L592.5,459l166.5-166.6L196.4,29.1C171,14.6,149.2,23.7,136.5,136.4z"/>
-        <path fill="#4285F4" d="M136.5,887.6c12.7,112.7,34.5,121.8,59.9,107.3l562.6-263.3L592.5,565L136.5,887.6z"/>
-      </svg>
-      Google Play Arcade
-    </div>
-    <div class="footer-links">
-      <a href="#" class="footer-link" onclick="openModal('feedbackModal'); return false;">Help & Support</a>
-      <a href="#" class="footer-link" onclick="openModal('settingsModal'); return false;">Settings</a>
-      <a href="#" class="footer-link" onclick="showTab('hallOfFame','tab-hof'); return false;">Leaderboards</a>
-      <a href="#" class="footer-link" onclick="showTab('storePage','tab-store'); return false;">Rewards</a>
-    </div>
-    <p class="footer-copy">
-      &copy; 2024 Team Steven Arcade. All rights reserved.<br>
-      This is a gamified workforce engagement platform. Please play responsibly and prioritize your cases.
-    </p>
-  </footer>
 
   <div id="hallOfFame" class="container">
     <div class="lb-controls">
@@ -614,6 +589,28 @@
     </div>
   </div>
 
+  <footer id="globalFooter">
+    <div class="footer-logo">
+      <svg width="24" height="24" viewBox="0 0 1024 1024">
+        <path fill="#34A853" d="M136.5,887.6C126.8,877,122,860.5,122,840.1V183.9c0-20.4,4.8-36.9,14.5-47.5l456,456L136.5,887.6z"/>
+        <path fill="#FBBC04" d="M759,625.6l-166.5-166.5L592.5,459L759,292.4l156.4,88.9c48.2,27.4,48.2,72.4,0,99.8L759,625.6z"/>
+        <path fill="#EA4335" d="M136.5,136.4L592.5,459l166.5-166.6L196.4,29.1C171,14.6,149.2,23.7,136.5,136.4z"/>
+        <path fill="#4285F4" d="M136.5,887.6c12.7,112.7,34.5,121.8,59.9,107.3l562.6-263.3L592.5,565L136.5,887.6z"/>
+      </svg>
+      Google Play Arcade
+    </div>
+    <div class="footer-links">
+      <a href="#" class="footer-link" onclick="openModal('feedbackModal'); return false;">Help & Support</a>
+      <a href="#" class="footer-link" onclick="openModal('settingsModal'); return false;">Settings</a>
+      <a href="#" class="footer-link" onclick="showTab('hallOfFame','tab-hof'); return false;">Leaderboards</a>
+      <a href="#" class="footer-link" onclick="showTab('storePage','tab-store'); return false;">Rewards</a>
+    </div>
+    <p class="footer-copy">
+      &copy; 2024 Team Steven Arcade. All rights reserved.<br>
+      This is a gamified workforce engagement platform. Please play responsibly and prioritize your cases.
+    </p>
+  </footer>
+
   <audio id="bgmLobby"></audio>
   <audio id="bgmCasino" loop src="https://cdn.pixabay.com/audio/2021/08/09/audio_dc39bde80a.mp3"></audio>
   <audio id="bgmGame" loop src="https://cdn.pixabay.com/audio/2022/03/15/audio_79ef602263.mp3"></audio>
@@ -624,6 +621,6 @@
   </div>
 
   <?!= include('PokemonData.js'); ?>
-  <?!= include('javascript'); ?>
+  <?!= include('JavaScript'); ?>
   </body>
   </html>
