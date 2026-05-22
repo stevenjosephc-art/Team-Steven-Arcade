@@ -18,10 +18,10 @@ let carouselInterval;
 let currentBGM = null;
 // --- LOBBY RADIO STATION ---
 let lobbyPlaylist = [
+  "https://docs.google.com/uc?export=open&id=1GeD8SV9CHLXMxk4lk2s2VU_5ESxxOlpr", // Track 0: User Requested BGM
   "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3", // Track 1: Upbeat Future Bass
   "https://cdn.pixabay.com/audio/2022/10/18/audio_31c2730ebb.mp3", // Track 2: Pop Dance
   "https://cdn.pixabay.com/audio/2022/03/23/audio_03d922bb7c.mp3"  // Track 3: Synthwave Pop
-  // -> PASTE YOUR OWN .MP3 LINKS HERE <-
 ];
 let currentLobbyTrack = Math.floor(Math.random() * lobbyPlaylist.length); // Start on a random song
 // ---------------------------
@@ -36,7 +36,7 @@ var babiPos = 0;
 // ════════════════════════════════════════════════════════════
 // 
 
-const CLIENT_VERSION = "v2.0.13"; // MUST MATCH APP_VERSION IN CODE.GS!
+const CLIENT_VERSION = "v2.0.14"; // MUST MATCH APP_VERSION IN CODE.GS!
 
 // Run the 1-Hour strict check in the background
 setInterval(() => {
