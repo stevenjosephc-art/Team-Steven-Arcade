@@ -430,12 +430,19 @@ function showTab(id,elId){
   }
 
   document.querySelectorAll('.container').forEach(c=>c.classList.remove('active')); 
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); 
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+    if (!t.classList.contains('locked')) t.setAttribute('tabindex', '-1');
+  });
   document.getElementById(id).classList.add('active');
   
   if(elId) {
     let el = document.getElementById(elId);
     el.classList.add('active');
+    el.setAttribute('aria-selected', 'true');
+    el.setAttribute('tabindex', '0');
+    document.getElementById(id).setAttribute('aria-labelledby', elId);
     updateTabIndicator(el); // Slides the visual indicator!
   }
   
@@ -458,10 +465,25 @@ var konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', '
 var konamiPos = 0;
 
 window.addEventListener('keydown', e => {
-  // --- QoL: KEYBOARD ACCESSIBILITY FOR ROLE="BUTTON" ---
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute('role') === 'button') {
+  // --- QoL: KEYBOARD ACCESSIBILITY FOR ROLE="BUTTON" & "TAB" ---
+  if ((e.key === 'Enter' || e.key === ' ') && (e.target.getAttribute('role') === 'button' || e.target.getAttribute('role') === 'tab')) {
       e.preventDefault();
       e.target.click();
+  }
+
+  // --- ARIA TAB LIST NAVIGATION (ARROW KEYS) ---
+  if (e.target.getAttribute('role') === 'tab') {
+    const tabs = Array.from(e.target.parentElement.querySelectorAll('[role="tab"]:not(.locked)'));
+    let index = tabs.indexOf(e.target);
+    if (['ArrowRight', 'ArrowDown'].includes(e.key)) {
+      e.preventDefault();
+      index = (index + 1) % tabs.length;
+      tabs[index].focus();
+    } else if (['ArrowLeft', 'ArrowUp'].includes(e.key)) {
+      e.preventDefault();
+      index = (index - 1 + tabs.length) % tabs.length;
+      tabs[index].focus();
+    }
   }
 
   // --- QoL: UNIVERSAL HOTKEYS ---
@@ -12774,9 +12796,15 @@ function enforceLevelGates() {
       if (currentPlayerLevel < gate.req) {
         el.classList.add('locked');
         el.innerHTML = `🔒 Lv. ${gate.req}`;
+        el.setAttribute('aria-disabled', 'true');
+        el.setAttribute('tabindex', '-1');
       } else {
         el.classList.remove('locked');
         el.innerHTML = gate.name;
+        el.removeAttribute('aria-disabled');
+        // If it's active, it should be 0, otherwise -1 (handled by showTab)
+        if (!el.classList.contains('active')) el.setAttribute('tabindex', '-1');
+        else el.setAttribute('tabindex', '0');
       }
     }
   });
