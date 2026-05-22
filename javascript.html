@@ -36,7 +36,7 @@ var babiPos = 0;
 // ════════════════════════════════════════════════════════════
 // 
 
-const CLIENT_VERSION = "v2.0.12"; // MUST MATCH APP_VERSION IN CODE.GS!
+const CLIENT_VERSION = "v2.0.13"; // MUST MATCH APP_VERSION IN CODE.GS!
 
 // Run the 1-Hour strict check in the background
 setInterval(() => {
@@ -734,7 +734,7 @@ var Games={
                    setTimeout(function() { location.reload(); }, 2500);
                }
            }
-       }).syncPokemonData(spent, JSON.stringify(self.playerData), "v2.0.12");
+       }).syncPokemonData(spent, JSON.stringify(self.playerData), "v2.0.13");
 
        var defSquad = [];
        this.playerData.squad.forEach(function(id) {
@@ -11572,7 +11572,7 @@ function renderRow(rowId,names){
       `<div class="app-icon" style="background-image: url('${safeIcon}'); background-size: cover; background-position: center;"></div>` : 
       `<div class="app-icon" style="background: ${GAME_BG[name]||'var(--surface-2)'}; font-size:${isBentoHero ? '90px' : '68px'};">${safeIcon}</div>`;
        
-    row.innerHTML+=`<button class="${cardClass}" onclick="openAppSheet('${name}')"><div class="app-icon-wrap">${pb?'<div class="pb-badge">PB: '+pb+'</div>':''}${iconHtml}</div><div class="app-title">${name}</div><div class="app-dev">${game.dev}</div><div class="app-meta"><span class="star">★</span>${game.rating} · ${game.installs}</div></button>`;
+    row.innerHTML+=`<button class="${cardClass}" onclick="openAppSheet('${name}')"><div class="app-icon-wrap">${pb?'<div class="pb-badge">PB: '+pb+'</div>':''}${iconHtml}</div><div class="app-title">${name}</div><div class="app-dev">${game.dev}</div><div class="app-meta"><span class="star">★</span>${game.rating} · ${game.installs}</div></button>`; 
   });
 }
 
@@ -11582,7 +11582,7 @@ function handleSearch(val) {
   var matches = Object.keys(Games).filter(n => n.toLowerCase().indexOf(q) !== -1 || Games[n].dev.toLowerCase().indexOf(q) !== -1 || Games[n].cat.toLowerCase().indexOf(q) !== -1);
   
   // Removed 'secLTM' and added null checks to make this crash-proof
-  var allSections = ['heroBanner', 'secFeatured', 'secRecommended', 'secArcade', 'secBrain', 'secCard', 'bountyCard'];
+  var allSections = ['secFeatured', 'secRecommended', 'secArcade', 'secBrain', 'secCard', 'bountyCard'];
   
   if(!val) { 
     allSections.forEach(id => { var el = document.getElementById(id); if(el) el.style.display = ''; }); 
@@ -11628,7 +11628,6 @@ function filterCategory(cat, el) {
   var setDisplay = (id, show) => { var e = document.getElementById(id); if(e) e.style.display = show ? '' : 'none'; };
 
   // 1. Hide the top fluff if we aren't on the main page
-  setDisplay('heroBanner', isAll);
   setDisplay('secFeatured', isAll);
   setDisplay('bountyCard', isAll);
   
@@ -12256,7 +12255,7 @@ function renderDailyBounties() {
 
 function renderBounties(state) {
   var todayBounties = getTodayBounties();
-  var hasUnclaimed = false;
+  var hasUnclaimed = false; 
   
   todayBounties.forEach(function(b, i) {
     var btnNum = i + 1;
@@ -12422,45 +12421,6 @@ function initApp() {
   refreshWalletUI(); 
   setTimeout(initializeCarousel, 500);
   updateTabIndicator(document.getElementById('tab-all'));
-  
-  var banner = document.getElementById('heroBanner');
-  if(banner) {
-    // Premium vibrant Candy Crush gradient background
-    banner.style.background = 'linear-gradient(135deg, #BF5AF2 0%, #FF3B30 100%)';
-    banner.style.border = 'none';
-    banner.style.boxShadow = '0 10px 30px rgba(191,90,242,0.4)';
-    banner.style.overflow = 'hidden';
-    banner.innerHTML = `
-      <div style="position: absolute; inset: 0; background: url('data:image/svg+xml;utf8,<svg width=\\'40\\' height=\\'40\\' xmlns=\\'http://www.w3.org/2000/svg\\'><circle cx=\\'2\\' cy=\\'2\\' r=\\'2\\' fill=\\'%23FFFFFF\\' fill-opacity=\\'0.1\\'/></svg>'); z-index: 1;"></div>
-      
-      <div style="position: absolute; left: -50px; top: -50px; width: 300px; height: 300px; background: rgba(255,255,255,0.15); filter: blur(50px); border-radius: 50%; z-index: 1; pointer-events: none;"></div>
-
-      <div style="flex:1; position: relative; z-index: 3;">
-        
-        <div style="background: rgba(255, 255, 255, 0.2); color: #FFF; border-left: 3px solid #FFF; padding: 4px 12px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1.5px; backdrop-filter: blur(4px); border-radius: 0 4px 4px 0;">
-          <span style="font-size: 14px; margin-right: 6px;">🍬</span> New Arrival
-        </div>
-        
-        <h1 style="color: #FFFFFF; font-size: 42px; margin-bottom: 12px; font-family: 'Google Sans Display', sans-serif; font-weight: 700; letter-spacing: -0.5px; text-shadow: 0 2px 10px rgba(0,0,0,0.2);">
-          Sweeten your <span style="color: #FFCF80;">Day</span>.
-        </h1>
-        
-        <p style="color: rgba(255,255,255,0.95); font-size: 15px; max-width: 480px; margin-bottom: 28px; line-height: 1.6; font-weight: 500; text-shadow: 0 1px 4px rgba(0,0,0,0.2);">
-          Candy Crush is now live in the Arcade! Match 3, trigger explosive combos, and climb to the top of the leaderboard.
-        </p>
-        
-        <button onclick="openAppSheet('Candy Crush')" style="background: #FFFFFF; color: #BF5AF2; border: none; padding: 12px 32px; border-radius: 100px; font-weight: 700; font-family: 'Google Sans'; font-size: 14px; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 8px;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.2)';">
-          Play Candy Crush
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-        </button>
-
-      </div>
-      
-      <div style="position: absolute; right: 40px; top: 50%; transform: translateY(-50%) rotate(5deg); z-index: 2; pointer-events: none;">
-         <img src="https://play-lh.googleusercontent.com/JvMhIxuwArVmcMReJQB8PIEB1MIQNMGf9j5i914JtkBrHrA55K-nMUIVlYCa7SXAdHtzLtsycEo6NpXeHFxLwvI" style="width: 160px; height: 160px; border-radius: 32px; box-shadow: 0 15px 35px rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.2);">
-      </div>
-    `;
-  }
 }
   
 window.addEventListener('mousemove', e => {
