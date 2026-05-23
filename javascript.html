@@ -385,11 +385,20 @@ function showTab(id,elId){
       return; 
   }
   document.querySelectorAll('.container').forEach(c=>c.classList.remove('active')); 
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); 
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+    t.setAttribute('tabindex', '-1');
+  });
   document.getElementById(id).classList.add('active');
   if(elId) {
     let el = document.getElementById(elId);
     el.classList.add('active');
+    el.setAttribute('aria-selected', 'true');
+    el.setAttribute('tabindex', '0');
+    // QoL: Dynamically update the tabpanel's label to match the active tab
+    const panel = document.getElementById(id);
+    if (panel) panel.setAttribute('aria-labelledby', elId);
     updateTabIndicator(el); // Slides the visual indicator!
   }
   if(id==='topCharts')loadLeaderboard();
@@ -407,10 +416,20 @@ function updateTabIndicator(el) {
 var konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
 var konamiPos = 0;
 window.addEventListener('keydown', e => {
-  // --- QoL: KEYBOARD ACCESSIBILITY FOR ROLE="BUTTON" ---
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute('role') === 'button') {
+  // --- QoL: KEYBOARD ACCESSIBILITY FOR ROLE="BUTTON" AND ROLE="TAB" ---
+  if ((e.key === 'Enter' || e.key === ' ') && (e.target.getAttribute('role') === 'button' || e.target.getAttribute('role') === 'tab')) {
       e.preventDefault();
       e.target.click();
+  }
+  // --- QoL: ARROW KEY NAVIGATION FOR TABS ---
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key) && e.target.getAttribute('role') === 'tab') {
+      const tabs = Array.from(document.querySelectorAll('.tabs [role="tab"]:not([aria-disabled="true"])'));
+      const index = tabs.indexOf(e.target);
+      if (index !== -1) {
+          e.preventDefault();
+          const dir = (e.key === 'ArrowLeft' || e.key === 'ArrowUp') ? -1 : 1;
+          tabs[(index + dir + tabs.length) % tabs.length].focus();
+      }
   }
   // --- QoL: UNIVERSAL HOTKEYS ---
   if (e.key === 'Escape') {
@@ -7126,7 +7145,7 @@ function renderFeatured(names){
     var iconHtml = safeIcon.startsWith('http') ? 
       `<div class="feat-banner" style="background-image: url('${safeIcon}'); background-size: cover; background-position: center;"></div><div class="feat-icon" style="background-image: url('${safeIcon}'); background-size: cover; background-position: center;"></div>` : 
       `<div class="feat-banner" style="background: ${GAME_BG[name]||'var(--surface-2)'}; display:flex; align-items:center; justify-content:center; font-size: 72px;">${safeIcon}</div><div class="feat-icon" style="background: ${GAME_BG[name]||'var(--surface-2)'}; font-size: 24px;">${safeIcon}</div>`;
-    row.innerHTML+=`<div class="feat-card" onclick="openAppSheet('${name}')">${iconHtml}<div class="feat-info"><div class="feat-meta"><h4>${name}</h4><p>${game.dev} · ${game.rating}★</p><span class="feat-badge ${badgeClass[name]||'new'}">${badges[name]||'Featured'}</span>${pb?'<p style="font-size:10px;color:var(--play-green);margin-top:3px;">PB: '+pb+'</p>':''}</div></div></div>`; 
+    row.innerHTML+=`<button class="feat-card" onclick="openAppSheet('${name}')" aria-label="Play ${name}">${iconHtml}<div class="feat-info"><div class="feat-meta"><h4>${name}</h4><p>${game.dev} · ${game.rating}★</p><span class="feat-badge ${badgeClass[name]||'new'}">${badges[name]||'Featured'}</span>${pb?'<p style="font-size:10px;color:var(--play-green);margin-top:3px;">PB: '+pb+'</p>':''}</div></div></button>`;
   });
 }
 function renderRow(rowId,names){
@@ -8145,9 +8164,14 @@ function enforceLevelGates() {
     if (el) {
       if (currentPlayerLevel < gate.req) {
         el.classList.add('locked');
+        el.setAttribute('aria-disabled', 'true');
+        el.setAttribute('tabindex', '-1');
         el.innerHTML = `🔒 Lv. ${gate.req}`;
       } else {
         el.classList.remove('locked');
+        el.removeAttribute('aria-disabled');
+        // Roving tabindex: if it's the active tab, it should be 0, otherwise -1.
+        el.setAttribute('tabindex', el.classList.contains('active') ? '0' : '-1');
         el.innerHTML = gate.name;
       }
     }
