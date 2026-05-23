@@ -679,14 +679,6 @@
     .new-ach-chip{display:inline-block;background:var(--play-green-light);color:var(--play-green);border:1px solid rgba(1,135,95,0.2);padding:4px 11px;border-radius:100px;font-size:11px;font-weight:600;margin:2px;}
     
     /* DOM Game Styles */
-    .sudoku-wrap{display:flex;flex-direction:column;align-items:center;width:100%;}
-    .sudoku-grid{display:grid;grid-template-columns:repeat(9,44px);border:3px solid #666;background:#444;gap:1px;border-radius:8px;overflow:hidden;margin-bottom:20px;}
-    .sudoku-cell{width:44px;height:44px;text-align:center;font-size:21px;font-weight:500;font-family:var(--font-google);border:none;background:#1E1E1E;color:#E8EAED;outline:none;}
-    .sudoku-cell:focus{background:#2a3545;} .sudoku-cell.fixed{background:#2D2E30;color:#fff;font-weight:700;cursor:default;}
-    .sudoku-cell.error{color:#EA4335;background:#3C1A1A;} .sudoku-cell.correct{color:#81C995;}
-    .sudoku-cell:nth-child(9n+3),.sudoku-cell:nth-child(9n+6){border-right:2px solid #666;}
-    .sudoku-cell:nth-child(n+19):nth-child(-n+27),.sudoku-cell:nth-child(n+46):nth-child(-n+54){border-bottom:2px solid #666;}
-    .solitaire-board{width:100%;max-width:700px;height:580px;position:relative;background:#01875F;border-radius:var(--radius-lg);box-shadow:inset 0 0 24px rgba(0,0,0,0.25);}
     .s-slot{width:72px;height:102px;border:2px dashed rgba(255,255,255,0.28);border-radius:9px;position:absolute;}
     .s-card{width:72px;height:102px;background:#fff;border-radius:9px;position:absolute;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;flex-direction:column;justify-content:space-between;padding:4px 6px;font-size:16px;font-weight:700;font-family:Arial;cursor:pointer;user-select:none;transition:transform 0.12s;}
     .s-card.back{background:repeating-linear-gradient(135deg,#1A73E8,#1A73E8 8px,#1558D6 8px,#1558D6 16px);color:transparent!important;border:2px solid #fff;}
