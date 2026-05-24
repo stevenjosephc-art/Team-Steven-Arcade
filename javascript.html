@@ -607,7 +607,7 @@ var Games={
     cat: 'Puzzle', engine: 'canvas', icon: '🧱', dev: 'Logic Labs', rating: 4.9, installs: 'NEW',
     gridSize: 8, cellSize: 45, margin: 50,
     init: function() {
-      canvas.width = 700; canvas.height = 480;
+      canvas.width = 700; canvas.height = 600;
       rawScore = 0; this.grid = Array(8).fill().map(() => Array(8).fill(0));
       this.pieces = []; this.generatePieces();
       this.dragIdx = -1; this.mx = 0; this.my = 0;
@@ -626,7 +626,7 @@ var Games={
             for(var i=0; i<self.pieces.length; i++) {
                 var p = self.pieces[i];
                 if(!p) continue;
-                var px = 180 + i*160, py = 410;
+                var px = 180 + i*160, py = 520;
                 if(self.mx > px-60 && self.mx < px+60 && self.my > py-60 && self.my < py+60) {
                     self.dragIdx = i; self.dragOffX = self.mx - px; self.dragOffY = self.my - py;
                     playSound('jump'); break;
@@ -725,13 +725,17 @@ var Games={
         });
     },
     draw: function() {
-        ctx.fillStyle = '#0a0e17'; ctx.fillRect(0,0,700,480);
+        var grad = ctx.createRadialGradient(350, 300, 0, 350, 300, 500);
+        grad.addColorStop(0, '#151b29'); grad.addColorStop(1, '#0a0e17');
+        ctx.fillStyle = grad; ctx.fillRect(0,0,700,600);
+
         ctx.fillStyle = 'rgba(255,255,255,0.03)';
         ctx.fillRect(this.margin, this.margin, 8*this.cellSize, 8*this.cellSize);
         for(var y=0; y<8; y++) {
             for(var x=0; x<8; x++) {
                 var bx = this.margin + x*this.cellSize, by = this.margin + y*this.cellSize;
-                ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+                ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+                ctx.lineWidth = 1;
                 ctx.strokeRect(bx, by, this.cellSize, this.cellSize);
                 if(this.grid[y][x]) { this.drawBlock(bx, by, this.grid[y][x]); }
             }
@@ -746,7 +750,7 @@ var Games={
             if(this.dragIdx === i) continue;
             var p = this.pieces[i];
             if(!p) continue;
-            this.drawPiece(180 + i*160, 410, p.shape, p.color, 0.6);
+            this.drawPiece(180 + i*160, 520, p.shape, p.color, 0.6);
         }
         if(this.dragIdx !== -1) {
             var p = this.pieces[this.dragIdx];
@@ -8527,8 +8531,8 @@ function buildStore(){
 
 function renderFeatured(names){
   var row=document.getElementById('rowFeatured');if(!row)return;row.innerHTML='';
-  var badges={'Severity 1: Core Breach':'🔥 Event', 'Tetris':'🏆 Top Rated','Playdle':'🟩 Word Game','Cyber Jump':'🔥 Hot','2048':'🧠 Brain Flex','PacMan':'💥 Action', '4 Emojis 1 Word':'🧩 New Puzzle'};
-  var badgeClass={'Severity 1: Core Breach':'hot', 'Tetris':'top','Playdle':'new','Cyber Jump':'hot','2048':'new','PacMan':'hot', '4 Emojis 1 Word':'new'};
+  var badges={'Severity 1: Core Breach':'🔥 Event', 'Tetris':'🏆 Top Rated','Playdle':'🟩 Word Game','2048':'🧠 Brain Flex','PacMan':'💥 Action', '4 Emojis 1 Word':'🧩 New Puzzle'};
+  var badgeClass={'Severity 1: Core Breach':'hot', 'Tetris':'top','Playdle':'new','2048':'new','PacMan':'hot', '4 Emojis 1 Word':'new'};
   names.forEach(name=>{ 
     var game=Games[name];if(!game)return; 
     var pb=personalBests[name]; 
