@@ -430,12 +430,21 @@ function showTab(id,elId){
   }
 
   document.querySelectorAll('.container').forEach(c=>c.classList.remove('active')); 
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); 
-  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.classList.remove('active');
+    t.setAttribute('aria-selected', 'false');
+    t.setAttribute('tabindex', '-1');
+  });
+
+  const panel = document.getElementById(id);
+  panel.classList.add('active');
 
   if(elId) {
     let el = document.getElementById(elId);
     el.classList.add('active');
+    el.setAttribute('aria-selected', 'true');
+    el.setAttribute('tabindex', '0');
+    panel.setAttribute('aria-labelledby', elId);
     updateTabIndicator(el); // Slides the visual indicator!
   }
 
@@ -458,10 +467,22 @@ var konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', '
 var konamiPos = 0;
 
 window.addEventListener('keydown', e => {
-  // --- QoL: KEYBOARD ACCESSIBILITY FOR ROLE="BUTTON" ---
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute('role') === 'button') {
+  // --- QoL: KEYBOARD ACCESSIBILITY FOR ROLE="BUTTON" OR ROLE="TAB" ---
+  const role = e.target.getAttribute('role');
+  if ((e.key === 'Enter' || e.key === ' ') && (role === 'button' || role === 'tab')) {
       e.preventDefault();
       e.target.click();
+  }
+
+  // --- QoL: ARROW KEY NAVIGATION FOR TABS ---
+  if (role === 'tab' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+    const tabs = Array.from(e.target.parentElement.querySelectorAll('[role="tab"]:not(.locked)'));
+    const index = tabs.indexOf(e.target);
+    let nextIndex;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') nextIndex = (index - 1 + tabs.length) % tabs.length;
+    else nextIndex = (index + 1) % tabs.length;
+    tabs[nextIndex].focus();
+    e.preventDefault();
   }
 
   // --- QoL: UNIVERSAL HOTKEYS ---
@@ -9749,7 +9770,7 @@ function enforceLevelGates() {
   const tabGates = [
     { id: 'tab-puzzle', req: 2, name: 'Brain & Logic' },
     { id: 'tab-card',   req: 10, name: 'Card Games' },
-    { id: 'tab-store',  req: 999, name: 'Rewards Store' }, // <--- Changed to 999!
+    { id: 'tab-store',  req: 5, name: 'Rewards Store' },
     { id: 'tab-hof',    req: 10, name: 'Hall of Fame' },
     { id: 'tab-casino', req: 99, name: '🎰 Vegas Casino' }
   ];
@@ -9760,9 +9781,15 @@ function enforceLevelGates() {
       if (currentPlayerLevel < gate.req) {
         el.classList.add('locked');
         el.innerHTML = `🔒 Lv. ${gate.req}`;
+        el.setAttribute('aria-disabled', 'true');
+        el.setAttribute('tabindex', '-1');
       } else {
         el.classList.remove('locked');
         el.innerHTML = gate.name;
+        el.removeAttribute('aria-disabled');
+        // Roving tabindex: tabIndex should be 0 only if it's the active tab
+        if (el.classList.contains('active')) el.setAttribute('tabindex', '0');
+        else el.setAttribute('tabindex', '-1');
       }
     }
   });
