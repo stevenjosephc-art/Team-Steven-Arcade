@@ -37,43 +37,5 @@ with open('Index.html', 'r') as f:
 
 bundled_content = re.sub(r'<\?!= include\(\'(.+?)\'\); \?>', include_file, index_content)
 
-# Mock google.script.run
-mock_script = """
-<script>
-window.google = {
-  script: {
-    run: {
-      withSuccessHandler: function(callback) {
-        return {
-          withFailureHandler: function() {
-            return {
-              getWalletBalance: function() { callback({tickets: 10, unspent: 1000000, xp: 50000, perfMult: 1.0}); },
-              getLiveJackpotWithVersion: function() { callback({amount: 500000, version: 'v2.0.14'}); },
-              getSessionInfo: function() { callback({ldap: 'jules', email: 'jules@example.com'}); },
-              getAllPersonalBests: function() { callback({}); },
-              getGlobalRankings: function() { callback([]); },
-              startGame: function() { callback({success: true, token: 'mock-token'}); },
-              getProfileStats: function() { callback({ldap: 'jules', xp: 50000, bests: {}, achievements: [], totalScore: 100000, gamesPlayed: 5, gameCounts: {}}); },
-              saveScore: function() { callback({success: true}); }
-            };
-          },
-          getWalletBalance: function() { callback({tickets: 10, unspent: 1000000, xp: 50000, perfMult: 1.0}); },
-          getLiveJackpotWithVersion: function() { callback({amount: 500000, version: 'v2.0.14'}); },
-          getSessionInfo: function() { callback({ldap: 'jules', email: 'jules@example.com'}); },
-          getAllPersonalBests: function() { callback({}); },
-          getGlobalRankings: function() { callback([]); },
-          startGame: function() { callback({success: true, token: 'mock-token'}); },
-          getProfileStats: function() { callback({ldap: 'jules', xp: 50000, bests: {}, achievements: [], totalScore: 100000, gamesPlayed: 5, gameCounts: {}}); },
-          saveScore: function() { callback({success: true}); }
-        };
-      }
-    }
-  }
-};
-</script>
-"""
-
-bundled_content = bundled_content.replace('</head>', mock_script + '</head>')
-
 with open('bundled.html', 'w') as f:
     f.write(bundled_content)

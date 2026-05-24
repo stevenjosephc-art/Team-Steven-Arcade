@@ -931,8 +931,8 @@ var Games={
     },
 
     _getStats: function(id, lvl) {
-        var d = null;
-        for(var j=0; j<POKEDEX.length; j++){ if(POKEDEX[j].id === id) { d = POKEDEX[j]; break; } }
+        // Performance: Use O(1) lookup instead of O(N) linear search
+        var d = POKEDEX_MAP[id] || null;
         if(!d) return { hp:10, atk:5, def:5, name:'MissingNo', type:'Normal', img: '' };
 
         var pCard = this.playerData && this.playerData.cards ? this.playerData.cards[id] : null;
@@ -1939,8 +1939,8 @@ var Games={
         m.pSquadHp[m.pIdx] = m.pCurHp;
 
         if (m.eCurHp <= 0) {
-            var eBase = null;
-            for(var j=0; j<POKEDEX.length; j++){ if(POKEDEX[j].id === eId) { eBase = POKEDEX[j]; break; } }
+            // Performance: Use O(1) lookup instead of O(N) linear search
+            var eBase = POKEDEX_MAP[eId] || null;
             var baseBst = eBase ? (eBase.hp + eBase.atk) : 100;
             var eLvl = m.eSquad[m.eIdx].lvl;
             var pLvl = this.playerData.cards[pId] ? this.playerData.cards[pId].lvl : 1;
@@ -2262,12 +2262,13 @@ var Games={
        var self = this;
        var owned = Object.keys(this.playerData.cards).map(Number);
        var getPwr = function(id) {
-           var d = null;
-           for(var j=0;j<POKEDEX.length;j++){ if(POKEDEX[j].id===id){d=POKEDEX[j];break;} }
+           // Performance: Use O(1) lookup instead of O(N) linear search
+           var d = POKEDEX_MAP[id] || null;
            return d ? (d.hp+d.atk)*Math.pow(1.1,self.playerData.cards[id].lvl-1) : 0;
        };
        var getType = function(id) {
-           for(var j=0;j<POKEDEX.length;j++){ if(POKEDEX[j].id===id) return POKEDEX[j].type; } return '';
+           // Performance: Use O(1) lookup instead of O(N) linear search
+           return POKEDEX_MAP[id]?.type || '';
        };
        owned.sort(function(a,b){ return getPwr(b)-getPwr(a); });
        var bestSquad = [owned[0]||null, owned[1]||null, owned[2]||null];
@@ -2489,7 +2490,8 @@ var Games={
        var html = "<div style='position:absolute; inset:0; background:rgba(0,0,0,0.92); z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center; backdrop-filter:blur(8px);'><h2 style='color:#FFF; font-family:Google Sans; margin-bottom:20px; font-size:32px; letter-spacing:2px; text-shadow:0 0 15px rgba(255,255,255,0.5);'>PACK OPENED!</h2><div style='display:flex; flex-wrap:wrap; gap:20px; justify-content:center; max-width:900px; padding:20px;'>";
        var hasShiny = false;
        pulls.forEach(function(p, i) {
-           var data = null; for(var j=0; j<POKEDEX.length; j++){ if(POKEDEX[j].id === p.id) { data = POKEDEX[j]; break; } }
+           // Performance: Use O(1) lookup instead of O(N) linear search
+           var data = POKEDEX_MAP[p.id] || null;
            var tCol = self.typeColors[data.type] || '#A0AAB2';
            var shinyEffect = p.shiny ? "box-shadow: 0 0 30px rgba(255,215,0,0.6); background: linear-gradient(145deg, #2a2a1a, #1a1500); border: 2px solid #FFD700;" : "background: linear-gradient(145deg, #1e293b, #0f172a); border: 2px solid " + tCol + "80;";
            var shinyTag = p.shiny ? "<div style='position:absolute; top:-15px; right:-15px; font-size:32px; animation:spin 3s linear infinite; z-index:3; filter:drop-shadow(0 0 10px #FFD700);'>✨</div>" : "";
@@ -2517,8 +2519,9 @@ var Games={
        ownedKeys.sort(function(a, b) {
            if (self.sortMode === 'lvl') { return self.playerData.cards[b].lvl - self.playerData.cards[a].lvl; } 
            else if (self.sortMode === 'type') {
-               var tA = "", tB = "";
-               for(var j=0; j<POKEDEX.length; j++) { if(POKEDEX[j].id===a) tA=POKEDEX[j].type; if(POKEDEX[j].id===b) tB=POKEDEX[j].type; }
+               // Performance: Use O(1) lookup instead of O(N) linear search
+               var tA = POKEDEX_MAP[a]?.type || "";
+               var tB = POKEDEX_MAP[b]?.type || "";
                if(tA < tB) return -1;
                if(tA > tB) return 1; return a - b;
            } else { return a - b; }
@@ -2599,7 +2602,7 @@ var Games={
        // --- BINDER ---
        } else if (this.activeTab === 'binder') {
            var activeTypes = [];
-           sq.forEach(function(id) { if(id !== null) { for(var j=0; j<POKEDEX.length; j++){ if(POKEDEX[j].id === id) { activeTypes.push(POKEDEX[j].type); break; } } } });
+           sq.forEach(function(id) { if(id !== null) { activeTypes.push(POKEDEX_MAP[id]?.type || ''); } });
            var hasSynergy = (activeTypes.length === 3 && activeTypes[0] === activeTypes[1] && activeTypes[1] === activeTypes[2]);
            var binderSynBadge = hasSynergy ? "<span style='margin-left:12px; background:linear-gradient(135deg, #FFD700, #F59E0B); color:#000; padding:4px 10px; border-radius:10px; font-weight:900; font-size:11px; border:1px solid #FFF; box-shadow:0 0 10px rgba(255,215,0,0.5);'>✨ " + activeTypes[0].toUpperCase() + " SYNERGY (+15% STATS)</span>" : "";
 
@@ -2607,7 +2610,8 @@ var Games={
            ['Vanguard', 'Midguard', 'Anchor'].forEach(function(role, i) {
                var cId = sq[i];
                if (cId !== null) {
-                   var d = null; for(var j=0; j<POKEDEX.length; j++){ if(POKEDEX[j].id === cId) { d = POKEDEX[j]; break; } }
+                   // Performance: Use O(1) lookup instead of O(N) linear search
+                   var d = POKEDEX_MAP[cId] || null;
 
                    var myData = self.playerData.cards[cId]; var tCol = self.typeColors[d.type] || '#A0AAB2'; var isShiny = myData.shiny;
                    var currentHp = d.hp * Math.pow(1.1, myData.lvl-1) * (hasSynergy ? 1.15 : 1.0); var hpPct = Math.min(100, (currentHp / 300) * 100);
@@ -2995,7 +2999,8 @@ var Games={
                       m.pSquad.forEach(function(sId, i) {
                           var isDead = m.pSquadHp[i] !== undefined && m.pSquadHp[i] <= 0;
                           var isActive = m.pIdx === i;
-                          var d = null; for(var j=0; j<POKEDEX.length; j++){ if(POKEDEX[j].id === sId) { d = POKEDEX[j]; break; } }
+                          // Performance: Use O(1) lookup instead of O(N) linear search
+                          var d = POKEDEX_MAP[sId] || null;
                           var action = (isActive || isDead) ? "" : "Games[\"Pokemon Play\"].switchPokemon("+i+")";
                           var hpText = isDead ? "FNT" : (m.pSquadHp[i] !== undefined ? Math.floor(m.pSquadHp[i]) + " HP" : "MAX");
                           switchHtml += "<div " + (action ? "onclick='"+action+"'" : "") + " style='cursor:" + (isActive||isDead ? 'not-allowed' : 'pointer') + "; opacity:" + (isDead ? 0.6 : 1) + "; background:" + (isActive ? '#E0F0D8' : '#F0F0F0') + "; border:2px solid #555; border-radius:6px; padding:0 8px; display:flex; align-items:center; gap:8px; box-sizing:border-box; height:100%;'><img src='" + d.img + "' style='height:24px;'><div style='flex:1; font-size:14px; font-weight:900; line-height:1.2;'>" + d.name.toUpperCase() + "</div><div style='font-size:12px; font-weight:bold; line-height:1.2;'>" + hpText + "</div></div>";
@@ -3163,7 +3168,8 @@ var Games={
 
         var processed = [];
         this.gtsData.forEach(function(l) {
-            var d = null; for(var j=0; j<POKEDEX.length; j++){ if(POKEDEX[j].id === l.pokeId) { d = POKEDEX[j]; break; } }
+            // Performance: Use O(1) lookup instead of O(N) linear search
+            var d = POKEDEX_MAP[l.pokeId] || null;
             if(!d) return;
 
             var bst = d.hp + d.atk;
