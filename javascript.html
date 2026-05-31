@@ -5244,9 +5244,9 @@ this.buildLevel();
         this.cs = 24;
         this.grid = Array.from({ length: 20 }, () => Array(10).fill(0));
         this.shapes = [null, [[1, 1, 1, 1]], [[1, 0, 0], [1, 1, 1]], [[0, 0, 1], [1, 1, 1]], [[1, 1], [1, 1]], [[0, 1, 1], [1, 1, 0]], [[0, 1, 0], [1, 1, 1]], [[1, 1, 0], [0, 1, 1]]];
-        // Material 3 Tonal Palettes (Primary/Tertiary containers)
-        this.colors = [null, '#D3E3FD', '#FAD8D6', '#FEF7E0', '#C4EED0', '#D7E3FF', '#FCE8E6', '#E7F4E9'];
-        this.strokeColors = [null, '#0B57D0', '#B3261E', '#7D6000', '#146C2E', '#005AC1', '#8C1D18', '#0F5223'];
+        // Vibrant Classic Arcade Palette
+        this.colors = [null, '#00F0F0', '#0000F0', '#F0A000', '#F0F000', '#00F000', '#A000F0', '#F00000'];
+        this.strokeColors = [null, '#00BABA', '#0000BA', '#BA7B00', '#BABA00', '#00BA00', '#7B00BA', '#BA0000'];
         this.fc = 0; rawScore = 0; this.combo = 0;
         this.multiplier = 1;
         
@@ -5423,34 +5423,50 @@ this.buildLevel();
         for (var c = 0; c <= 10; c++) { ctx.moveTo(offX + c * this.cs, 0); ctx.lineTo(offX + c * this.cs, H); }
         ctx.stroke();
 
-        // Universal Helper to draw modern Material 3 blocks
-        var drawBlock = (x, y, size, type, isGhost) => {
+        // Universal Helper to draw vibrant, classic arcade blocks with glow
+        var drawBlock = (x, y, size, type, isGhost, isLocked) => {
             var color = this.colors[type];
             var stroke = this.strokeColors[type];
-            var radius = 4;
+            var radius = 2; // sharper corners for classic feel
+
             if (isGhost) {
-                ctx.strokeStyle = stroke;
-                ctx.lineWidth = 1.5;
-                ctx.setLineDash([4, 2]);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([size/4, size/8]);
                 ctx.beginPath(); ctx.roundRect(x + 2, y + 2, size - 4, size - 4, radius); ctx.stroke();
                 ctx.setLineDash([]);
-            } else {
-                ctx.fillStyle = color;
-                ctx.beginPath(); ctx.roundRect(x + 1, y + 1, size - 2, size - 2, radius); ctx.fill();
-                ctx.strokeStyle = stroke;
-                ctx.lineWidth = 1;
-                ctx.beginPath(); ctx.roundRect(x + 1, y + 1, size - 2, size - 2, radius); ctx.stroke();
-
-                // Subtle M3 Surface Tint / Inner Shadow
-                ctx.fillStyle = 'rgba(255,255,255,0.1)';
-                ctx.beginPath(); ctx.roundRect(x + 2, y + 2, size - 4, size / 2.5, {tl: radius, tr: radius, bl: 0, br: 0}); ctx.fill();
+                return;
             }
+
+            // Glow for active pieces
+            if (!isLocked) {
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 10;
+            }
+
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.roundRect(x + 1, y + 1, size - 2, size - 2, radius); ctx.fill();
+
+            ctx.shadowBlur = 0; // reset glow
+
+            // Classic Bevel/Highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // top-left light
+            ctx.beginPath(); ctx.moveTo(x+1, y+1); ctx.lineTo(x+size-1, y+1); ctx.lineTo(x+size-4, y+4); ctx.lineTo(x+4, y+4); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(x+1, y+1); ctx.lineTo(x+1, y+size-1); ctx.lineTo(x+4, y+size-4); ctx.lineTo(x+4, y+4); ctx.fill();
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; // bottom-right shadow
+            ctx.beginPath(); ctx.moveTo(x+1, y+size-1); ctx.lineTo(x+size-1, y+size-1); ctx.lineTo(x+size-4, y+size-4); ctx.lineTo(x+4, y+size-4); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(x+size-1, y+1); ctx.lineTo(x+size-1, y+size-1); ctx.lineTo(x+size-4, y+size-4); ctx.lineTo(x+size-4, y+4); ctx.fill();
+
+            ctx.strokeStyle = stroke;
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.roundRect(x + 1, y + 1, size - 2, size - 2, radius); ctx.stroke();
         };
 
         // Draw locked grid
         for (var r = 0; r < 20; r++) {
             for (var c = 0; c < 10; c++) {
-                if (this.grid[r][c]) drawBlock(offX + c * this.cs, r * this.cs, this.cs, this.grid[r][c], false);
+                if (this.grid[r][c]) drawBlock(offX + c * this.cs, r * this.cs, this.cs, this.grid[r][c], false, true);
             }
         }
 
@@ -5463,26 +5479,31 @@ this.buildLevel();
             for (var r2 = 0; r2 < ghost.matrix.length; r2++)
                 for (var c2 = 0; c2 < ghost.matrix[r2].length; c2++)
                     if (ghost.matrix[r2][c2] && ghost.y + r2 >= 0) 
-                        drawBlock(offX + (ghost.x + c2) * this.cs, (ghost.y + r2) * this.cs, this.cs, this.p.color, true);
+                        drawBlock(offX + (ghost.x + c2) * this.cs, (ghost.y + r2) * this.cs, this.cs, this.p.color, true, false);
             
             // Draw Active
             for (var r3 = 0; r3 < this.p.matrix.length; r3++)
                 for (var c3 = 0; c3 < this.p.matrix[r3].length; c3++)
                     if (this.p.matrix[r3][c3] && this.p.y + r3 >= 0) 
-                        drawBlock(offX + (this.p.x + c3) * this.cs, (this.p.y + r3) * this.cs, this.cs, this.p.color, false);
+                        drawBlock(offX + (this.p.x + c3) * this.cs, (this.p.y + r3) * this.cs, this.cs, this.p.color, false, false);
         }
         ctx.restore();
 
-        // ── Material 3 UI Panels ──
+        // ── Vibrant Arcade UI Panels ──
         var panelW = 120, panelH = 100, hx = offX - 150, nx = offX + 10 * this.cs + 30;
         
         const drawPanel = (x, y, w, h, title) => {
-            // Surface Container High
-            ctx.fillStyle = 'rgba(40, 45, 60, 0.85)';
-            ctx.beginPath(); ctx.roundRect(x, y, w, h, 16); ctx.fill();
+            // Darker high-contrast surface
+            ctx.fillStyle = 'rgba(10, 15, 25, 0.9)';
+            ctx.beginPath(); ctx.roundRect(x, y, w, h, 8); ctx.fill();
+
+            // Vibrant accent border
+            ctx.strokeStyle = `hsl(${(this.fc * 2) % 360}, 70%, 60%)`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
             
-            ctx.fillStyle = '#E3E3E3'; ctx.font = 'bold 12px Google Sans'; ctx.textAlign = 'left';
-            ctx.fillText(title, x + 12, y + 20);
+            ctx.fillStyle = '#FFF'; ctx.font = 'bold 13px Google Sans'; ctx.textAlign = 'center';
+            ctx.fillText(title, x + w/2, y + 22);
         };
 
         drawPanel(hx, 40, panelW, panelH, 'HOLD');
@@ -5495,7 +5516,7 @@ this.buildLevel();
             var wOff = (panelW - sMatrix[0].length * bw) / 2;
             var hOff = (panelH - 20 - sMatrix.length * bw) / 2 + 30;
             sMatrix.forEach((row, r) => row.forEach((c2, c) => { 
-                if (c2) drawBlock(hx + wOff + c * bw, hOff + r * bw, bw, this.holdType, false);
+                if (c2) drawBlock(hx + wOff + c * bw, hOff + r * bw, bw, this.holdType, false, true);
             }));
         }
 
@@ -5505,7 +5526,7 @@ this.buildLevel();
         var nwOff = (panelW - nMatrix[0].length * nbw) / 2;
         var nhOff = (panelH - 20 - nMatrix.length * nbw) / 2 + 30;
         nMatrix.forEach((row, r) => row.forEach((c2, c) => { 
-            if (c2) drawBlock(nx + nwOff + c * nbw, nhOff + r * nbw, nbw, this.nextType, false);
+            if (c2) drawBlock(nx + nwOff + c * nbw, nhOff + r * nbw, nbw, this.nextType, false, true);
         }));
 
         // ── Stats UI ──
