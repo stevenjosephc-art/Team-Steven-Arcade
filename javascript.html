@@ -559,6 +559,7 @@ canvas.addEventListener('mousemove', e => {
 });
 
 var HOW_TO={
+  '8 Ball Pool': 'Click and drag back to aim and power your shot.\nRelease to strike the cue ball.\nSink all balls to win. Consecutive sinks grant score multipliers!',
   'Block Blast': 'Drag and drop pieces onto the 8x8 grid.\nComplete rows or columns to clear them and score!\nClear multiple lines for COMBO multipliers!',
   'Cafe Tycoon': 'CLICK the Coffee Cup rapidly to generate Cash.\nSpend Cash on upgrades to build passive income.\nYou have 3 Minutes to build the highest revenue possible!',
   'Candy Run': 'UP ARROW, W, SPACE, or CLICK to Jump.\nSurvive as long as possible and collect candies!\nChoose your hero before the run begins.',
@@ -7084,6 +7085,252 @@ this.buildLevel();
       }
     },
 
+  '8 Ball Pool': {
+    cat: 'Arcade', engine: 'canvas', icon: '🎱', dev: 'Steven Studios', rating: 4.8, installs: 'NEW',
+    init: function() {
+      canvas.width = 700; canvas.height = 480;
+      this.balls = [];
+      this.pockets = [
+        {x: 50, y: 50}, {x: 350, y: 40}, {x: 650, y: 50},
+        {x: 50, y: 430}, {x: 350, y: 440}, {x: 650, y: 430}
+      ];
+      this.pocketRadius = 22;
+      this.ballRadius = 10;
+      this.friction = 0.985;
+      this.cue = { x: 175, y: 240, vx: 0, vy: 0, type: 'cue' };
+      this.balls.push(this.cue);
+
+      // Rack balls
+      let startX = 500, startY = 240;
+      let count = 0;
+      for (let i = 0; i < 5; i++) {
+        for (let j = 0; j <= i; j++) {
+          count++;
+          this.balls.push({
+            x: startX + i * (this.ballRadius * 1.8),
+            y: startY + (j - i / 2) * (this.ballRadius * 2.1),
+            vx: 0, vy: 0,
+            id: count,
+            color: count === 8 ? '#111' : (count <= 8 ? 'solid' : 'striped'),
+            baseColor: this.getBallColor(count)
+          });
+        }
+      }
+      this.isDragging = false;
+      this.dragStart = {x: 0, y: 0};
+      this.mousePos = {x: 0, y: 0};
+      this.shooting = false;
+      this.combo = 0;
+      rawScore = 0;
+    },
+    getBallColor: function(id) {
+      const colors = [
+        '', '#FFD700', '#0056b3', '#E63946', '#4A148C', '#FB8C00', '#1B5E20', '#800000', '#111',
+        '#FFD700', '#0056b3', '#E63946', '#4A148C', '#FB8C00', '#1B5E20', '#800000'
+      ];
+      return colors[id] || '#fff';
+    },
+    update: function() {
+      let moving = false;
+      for (let b of this.balls) {
+        b.x += b.vx;
+        b.y += b.vy;
+        b.vx *= this.friction;
+        b.vy *= this.friction;
+        if (Math.abs(b.vx) < 0.1) b.vx = 0;
+        if (Math.abs(b.vy) < 0.1) b.vy = 0;
+        if (b.vx !== 0 || b.vy !== 0) moving = true;
+
+        // Wall collisions
+        if (b.x < 50 + this.ballRadius || b.x > 650 - this.ballRadius) {
+          b.vx *= -0.8;
+          b.x = b.x < 50 + this.ballRadius ? 50 + this.ballRadius : 650 - this.ballRadius;
+        }
+        if (b.y < 50 + this.ballRadius || b.y > 430 - this.ballRadius) {
+          b.vy *= -0.8;
+          b.y = b.y < 50 + this.ballRadius ? 50 + this.ballRadius : 430 - this.ballRadius;
+        }
+
+        // Pocket detection
+        for (let p of this.pockets) {
+          if (Math.hypot(b.x - p.x, b.y - p.y) < this.pocketRadius) {
+            if (b.type === 'cue') {
+              b.x = 175; b.y = 240; b.vx = 0; b.vy = 0;
+              rawScore = Math.max(0, rawScore - 500);
+              showToast('SCRATCH! -500 Pts');
+              playSound('crash');
+            } else {
+              this.balls = this.balls.filter(ball => ball !== b);
+              this.combo++;
+              let gain = 1000 * this.combo;
+              rawScore += gain;
+              showToast('BALL SUNK! +' + gain);
+              playSound('coin');
+              if (this.balls.length === 1) { // Only cue ball left
+                setTimeout(() => triggerGameOver('Table Cleared! Final Score: ' + score), 1000);
+              }
+            }
+          }
+        }
+      }
+
+      // Ball collisions
+      for (let i = 0; i < this.balls.length; i++) {
+        for (let j = i + 1; j < this.balls.length; j++) {
+          let b1 = this.balls[i], b2 = this.balls[j];
+          let dist = Math.hypot(b1.x - b2.x, b1.y - b2.y);
+          if (dist < this.ballRadius * 2) {
+            // Collision physics
+            let angle = Math.atan2(b2.y - b1.y, b2.x - b1.x);
+            let sin = Math.sin(angle), cos = Math.cos(angle);
+
+            // Rotate velocities
+            let vx1 = b1.vx * cos + b1.vy * sin;
+            let vy1 = b1.vy * cos - b1.vx * sin;
+            let vx2 = b2.vx * cos + b2.vy * sin;
+            let vy2 = b2.vy * cos - b2.vx * sin;
+
+            // Resolve 1D elastic collision
+            let temp = vx1; vx1 = vx2; vx2 = temp;
+
+            // Rotate back
+            b1.vx = vx1 * cos - vy1 * sin;
+            b1.vy = vy1 * cos + vx1 * sin;
+            b2.vx = vx2 * cos - vy2 * sin;
+            b2.vy = vy2 * cos + vx2 * sin;
+
+            // Prevent overlap
+            let overlap = (this.ballRadius * 2 - dist) / 2;
+            b1.x -= overlap * cos; b1.y -= overlap * sin;
+            b2.x += overlap * cos; b2.y += overlap * sin;
+
+            if (Math.abs(vx1) + Math.abs(vx2) > 1) playSound('jump');
+          }
+        }
+      }
+
+      if (!moving && this.shooting) {
+        this.shooting = false;
+        this.combo = 0;
+      }
+    },
+    draw: function() {
+      // Table Felt
+      ctx.fillStyle = '#0a3d2e';
+      ctx.fillRect(0, 0, 700, 480);
+
+      // Cushions
+      ctx.fillStyle = '#082a20';
+      ctx.fillRect(30, 30, 640, 20); // Top
+      ctx.fillRect(30, 430, 640, 20); // Bottom
+      ctx.fillRect(30, 30, 20, 420); // Left
+      ctx.fillRect(650, 30, 20, 420); // Right
+
+      // Wood Frame
+      ctx.strokeStyle = '#3e2723';
+      ctx.lineWidth = 10;
+      ctx.strokeRect(25, 25, 650, 430);
+
+      // Pockets
+      ctx.fillStyle = '#000';
+      for (let p of this.pockets) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, this.pocketRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#444'; ctx.lineWidth = 2; ctx.stroke();
+      }
+
+      // Balls
+      for (let b of this.balls) {
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.arc(b.x + 3, b.y + 3, this.ballRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Sphere
+        let grad = ctx.createRadialGradient(b.x - 3, b.y - 3, 2, b.x, b.y, this.ballRadius);
+        if (b.type === 'cue') {
+          grad.addColorStop(0, '#fff'); grad.addColorStop(1, '#ddd');
+        } else {
+          grad.addColorStop(0, '#fff'); grad.addColorStop(0.2, b.baseColor); grad.addColorStop(1, '#000');
+        }
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, this.ballRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Striped overlay
+        if (b.color === 'striped') {
+          ctx.fillStyle = 'rgba(255,255,255,0.8)';
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, this.ballRadius, Math.PI * 0.2, Math.PI * 0.8);
+          ctx.arc(b.x, b.y, this.ballRadius, Math.PI * 1.2, Math.PI * 1.8);
+          ctx.fill();
+        }
+      }
+
+      // Aiming
+      if (this.isDragging && !this.shooting) {
+        let dx = this.mousePos.x - this.cue.x;
+        let dy = this.mousePos.y - this.cue.y;
+        let dist = Math.hypot(dx, dy);
+        let angle = Math.atan2(dy, dx);
+
+        // Aiming line
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(this.cue.x, this.cue.y);
+        ctx.lineTo(this.cue.x - Math.cos(angle) * 200, this.cue.y - Math.sin(angle) * 200);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Cue stick
+        ctx.save();
+        ctx.translate(this.cue.x, this.cue.y);
+        ctx.rotate(angle);
+        let power = Math.min(dist, 150);
+        ctx.fillStyle = '#d7ccc8';
+        ctx.fillRect(power + 20, -3, 200, 6);
+        ctx.fillStyle = '#3e2723';
+        ctx.fillRect(power + 150, -4, 70, 8);
+        ctx.restore();
+      }
+    },
+    click: function(mx, my) {
+      if (this.shooting) return;
+      this.isDragging = true;
+      this.dragStart = {x: mx, y: my};
+
+      const self = this;
+      const mm = e => {
+        let r = canvas.getBoundingClientRect();
+        self.mousePos = {
+          x: (e.clientX - r.left) * (canvas.width / r.width),
+          y: (e.clientY - r.top) * (canvas.height / r.height)
+        };
+      };
+      const mu = e => {
+        if (!self.isDragging) return;
+        self.isDragging = false;
+        let dx = self.mousePos.x - self.cue.x;
+        let dy = self.mousePos.y - self.cue.y;
+        let power = Math.min(Math.hypot(dx, dy), 150) / 10;
+        let angle = Math.atan2(dy, dx);
+        self.cue.vx = -Math.cos(angle) * power;
+        self.cue.vy = -Math.sin(angle) * power;
+        self.shooting = true;
+        playSound('jump');
+        window.removeEventListener('mousemove', mm);
+        window.removeEventListener('mouseup', mu);
+      };
+      window.addEventListener('mousemove', mm);
+      window.addEventListener('mouseup', mu);
+    }
+  },
+
   'Sector Defense': {
   cat: 'Arcade', engine: 'canvas', icon: '🗼', dev: 'Void Interactive', rating: 4.9, installs: '2.5M',
 
@@ -8551,7 +8798,7 @@ function togglePause(){
 // ════════════════════════════════════════════════════════════
 //  STORE & CASINO LOGIC
 // ════════════════════════════════════════════════════════════
-var ARCADE  = ['Pokemon Play','Cafe Tycoon', 'Candy Run', 'Flappy Bot', 'PacMan', 'Piano Tiles', 'Sector Defense', 'Severity 1: Core Breach', 'Spam Defender'];
+var ARCADE  = ['8 Ball Pool', 'Pokemon Play','Cafe Tycoon', 'Candy Run', 'Flappy Bot', 'PacMan', 'Piano Tiles', 'Sector Defense', 'Severity 1: Core Breach', 'Spam Defender'];
 var BRAIN   = ['2048', 'Block Blast', '4 Emojis 1 Word', 'Candy Crush', 'Cosmic Merge', 'Minesweeper', 'Tetris'];
 var CARD    = ['Playdle'];
 
@@ -9464,9 +9711,9 @@ window.addEventListener('mousemove', e => {
 });
 
 var GAME_BG = { 
+  '8 Ball Pool': '#0a3d2e',
   'Candy Run': '#FF9AA2',
   'Sector Defense': '#1A1A2E',
-
 };
 
 buildStore(); 
