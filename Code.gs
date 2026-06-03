@@ -285,7 +285,8 @@ function saveScore(game, diff, score, token) {
     const MIN_DURATION_MS = {
       'Sudoku': 30000, 'Solitaire': 45000, 'Playdle': 15000,
       'Minesweeper': 20000, 'Tetris': 30000, '2048': 20000,
-      'Candy Run': 3000, 'Flappy Bot': 3000 // Allow quick deaths!
+      'Candy Run': 3000, 'Flappy Bot': 3000, // Allow quick deaths!
+      '8 Ball Pool': 10000
     };
     
     const startTime = parseInt(cache.get('game_start_' + user) || '0');
@@ -309,7 +310,8 @@ function saveScore(game, diff, score, token) {
       'Cyber Jump': 6000000, 'Candy Crush': 2500000, '4 Emojis 1 Word': 900000,
       'Severity 1: Core Breach': 25000000, 'Cosmic Merge': 1500000,
       'Sector 4: Containment': 450000, 'Angry Agents': 750000,
-      'Candy Run': 5000000 // ADDED CANDY RUN CAP
+      'Candy Run': 5000000, // ADDED CANDY RUN CAP
+      '8 Ball Pool': 250000
     };
     
     if (MAX_SCORES[game] && finalScore > MAX_SCORES[game]) {
