@@ -7096,23 +7096,32 @@ this.buildLevel();
       ];
       this.pocketRadius = 22;
       this.ballRadius = 10;
-      this.friction = 0.985;
-      this.cue = { x: 175, y: 240, vx: 0, vy: 0, type: 'cue' };
+      this.friction = 0.988; // Slightly more natural rolling
+      this.cue = { x: 175, y: 240, vx: 0, vy: 0, type: 'cue', id: 0, baseColor: '#fff' };
       this.balls.push(this.cue);
 
       // Rack balls
       let startX = 500, startY = 240;
+      let ballIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+      // Shuffle just to be fancy, but keep 8 in the middle
+      ballIds = ballIds.filter(id => id !== 8);
+      for (let i = ballIds.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [ballIds[i], ballIds[j]] = [ballIds[j], ballIds[i]];
+      }
+      ballIds.splice(4, 0, 8); // Put 8 ball in the middle of the rack
+
       let count = 0;
       for (let i = 0; i < 5; i++) {
         for (let j = 0; j <= i; j++) {
-          count++;
+          let id = ballIds[count++];
           this.balls.push({
             x: startX + i * (this.ballRadius * 1.8),
             y: startY + (j - i / 2) * (this.ballRadius * 2.1),
             vx: 0, vy: 0,
-            id: count,
-            color: count === 8 ? '#111' : (count <= 8 ? 'solid' : 'striped'),
-            baseColor: this.getBallColor(count)
+            id: id,
+            color: id === 8 ? 'black' : (id <= 8 ? 'solid' : 'striped'),
+            baseColor: this.getBallColor(id)
           });
         }
       }
@@ -7121,6 +7130,8 @@ this.buildLevel();
       this.mousePos = {x: 0, y: 0};
       this.shooting = false;
       this.combo = 0;
+      this.turn = 'player';
+      this.isAiTurn = false;
       rawScore = 0;
     },
     getBallColor: function(id) {
@@ -7137,17 +7148,17 @@ this.buildLevel();
         b.y += b.vy;
         b.vx *= this.friction;
         b.vy *= this.friction;
-        if (Math.abs(b.vx) < 0.1) b.vx = 0;
-        if (Math.abs(b.vy) < 0.1) b.vy = 0;
+        if (Math.abs(b.vx) < 0.05) b.vx = 0;
+        if (Math.abs(b.vy) < 0.05) b.vy = 0;
         if (b.vx !== 0 || b.vy !== 0) moving = true;
 
-        // Wall collisions
+        // Wall collisions (with slight energy loss)
         if (b.x < 50 + this.ballRadius || b.x > 650 - this.ballRadius) {
-          b.vx *= -0.8;
+          b.vx *= -0.7; // Lose 30% energy on cushion
           b.x = b.x < 50 + this.ballRadius ? 50 + this.ballRadius : 650 - this.ballRadius;
         }
         if (b.y < 50 + this.ballRadius || b.y > 430 - this.ballRadius) {
-          b.vy *= -0.8;
+          b.vy *= -0.7;
           b.y = b.y < 50 + this.ballRadius ? 50 + this.ballRadius : 430 - this.ballRadius;
         }
 
@@ -7155,6 +7166,7 @@ this.buildLevel();
         for (let p of this.pockets) {
           if (Math.hypot(b.x - p.x, b.y - p.y) < this.pocketRadius) {
             if (b.type === 'cue') {
+              // Scratch: reset cue ball
               b.x = 175; b.y = 240; b.vx = 0; b.vy = 0;
               rawScore = Math.max(0, rawScore - 500);
               showToast('SCRATCH! -500 Pts');
@@ -7163,8 +7175,8 @@ this.buildLevel();
               this.balls = this.balls.filter(ball => ball !== b);
               this.combo++;
               let gain = 1000 * this.combo;
-              rawScore += gain;
-              showToast('BALL SUNK! +' + gain);
+              if (this.turn === 'player') rawScore += gain;
+              showToast((this.turn === 'player' ? 'YOU' : 'AI') + ' SUNK A BALL!');
               playSound('coin');
               if (this.balls.length === 1) { // Only cue ball left
                 setTimeout(() => triggerGameOver('Table Cleared! Final Score: ' + score), 1000);
@@ -7180,31 +7192,26 @@ this.buildLevel();
           let b1 = this.balls[i], b2 = this.balls[j];
           let dist = Math.hypot(b1.x - b2.x, b1.y - b2.y);
           if (dist < this.ballRadius * 2) {
-            // Collision physics
             let angle = Math.atan2(b2.y - b1.y, b2.x - b1.x);
             let sin = Math.sin(angle), cos = Math.cos(angle);
 
-            // Rotate velocities
             let vx1 = b1.vx * cos + b1.vy * sin;
             let vy1 = b1.vy * cos - b1.vx * sin;
             let vx2 = b2.vx * cos + b2.vy * sin;
             let vy2 = b2.vy * cos - b2.vx * sin;
 
-            // Resolve 1D elastic collision
             let temp = vx1; vx1 = vx2; vx2 = temp;
 
-            // Rotate back
             b1.vx = vx1 * cos - vy1 * sin;
             b1.vy = vy1 * cos + vx1 * sin;
             b2.vx = vx2 * cos - vy2 * sin;
             b2.vy = vy2 * cos + vx2 * sin;
 
-            // Prevent overlap
             let overlap = (this.ballRadius * 2 - dist) / 2;
             b1.x -= overlap * cos; b1.y -= overlap * sin;
             b2.x += overlap * cos; b2.y += overlap * sin;
 
-            if (Math.abs(vx1) + Math.abs(vx2) > 1) playSound('jump');
+            if (Math.abs(vx1) + Math.abs(vx2) > 0.5) playSound('jump');
           }
         }
       }
@@ -7212,24 +7219,36 @@ this.buildLevel();
       if (!moving && this.shooting) {
         this.shooting = false;
         this.combo = 0;
+        // Swap turns if nothing sunk? (Simplified: always swap or AI takes its turn)
+        if (this.turn === 'player') {
+            this.turn = 'ai';
+            this.isAiTurn = true;
+            setTimeout(() => this.aiMove(), 1500);
+        } else {
+            this.turn = 'player';
+            this.isAiTurn = false;
+        }
       }
     },
     draw: function() {
-      // Table Felt
-      ctx.fillStyle = '#0a3d2e';
+      // 1. Table Felt with Overhead Spotlight
+      let tableGrad = ctx.createRadialGradient(350, 240, 50, 350, 240, 500);
+      tableGrad.addColorStop(0, '#10523e');
+      tableGrad.addColorStop(1, '#082a20');
+      ctx.fillStyle = tableGrad;
       ctx.fillRect(0, 0, 700, 480);
 
       // Cushions
-      ctx.fillStyle = '#082a20';
+      ctx.fillStyle = '#06201a';
       ctx.fillRect(30, 30, 640, 20); // Top
       ctx.fillRect(30, 430, 640, 20); // Bottom
       ctx.fillRect(30, 30, 20, 420); // Left
       ctx.fillRect(650, 30, 20, 420); // Right
 
       // Wood Frame
-      ctx.strokeStyle = '#3e2723';
-      ctx.lineWidth = 10;
-      ctx.strokeRect(25, 25, 650, 430);
+      ctx.strokeStyle = '#2d1a1a';
+      ctx.lineWidth = 12;
+      ctx.strokeRect(24, 24, 652, 432);
 
       // Pockets
       ctx.fillStyle = '#000';
@@ -7237,21 +7256,25 @@ this.buildLevel();
         ctx.beginPath();
         ctx.arc(p.x, p.y, this.pocketRadius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = '#444'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.strokeStyle = '#111'; ctx.lineWidth = 3; ctx.stroke();
       }
 
       // Balls
       for (let b of this.balls) {
-        // Shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        // 2. High-Quality Shadows
+        ctx.save();
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
         ctx.beginPath();
-        ctx.arc(b.x + 3, b.y + 3, this.ballRadius, 0, Math.PI * 2);
+        ctx.arc(b.x + 4, b.y + 4, this.ballRadius, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
 
-        // Sphere
-        let grad = ctx.createRadialGradient(b.x - 3, b.y - 3, 2, b.x, b.y, this.ballRadius);
+        // 3. Realistic Ball Design
+        let grad = ctx.createRadialGradient(b.x - 3, b.y - 3, 1, b.x, b.y, this.ballRadius);
         if (b.type === 'cue') {
-          grad.addColorStop(0, '#fff'); grad.addColorStop(1, '#ddd');
+          grad.addColorStop(0, '#fff'); grad.addColorStop(1, '#ccc');
         } else {
           grad.addColorStop(0, '#fff'); grad.addColorStop(0.2, b.baseColor); grad.addColorStop(1, '#000');
         }
@@ -7260,47 +7283,190 @@ this.buildLevel();
         ctx.arc(b.x, b.y, this.ballRadius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Striped overlay
+        // Stripes
         if (b.color === 'striped') {
-          ctx.fillStyle = 'rgba(255,255,255,0.8)';
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
           ctx.beginPath();
           ctx.arc(b.x, b.y, this.ballRadius, Math.PI * 0.2, Math.PI * 0.8);
+          ctx.lineTo(b.x - Math.cos(Math.PI * 0.2) * this.ballRadius, b.y - Math.sin(Math.PI * 0.2) * this.ballRadius); // Close path hack
+          ctx.fill();
+          ctx.beginPath();
           ctx.arc(b.x, b.y, this.ballRadius, Math.PI * 1.2, Math.PI * 1.8);
           ctx.fill();
         }
+
+        // White circle for number
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Number
+        if (b.id !== 0) {
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 5px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(b.id, b.x, b.y);
+        }
+
+        // Glossy Shimmer
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.beginPath();
+        ctx.arc(b.x - 3, b.y - 3, 2, 0, Math.PI * 2);
+        ctx.fill();
       }
 
+      // Turn Indicator
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 14px "Google Sans"';
+      ctx.textAlign = 'left';
+      ctx.fillText('TURN: ' + (this.turn === 'player' ? 'PLAYER' : 'AI'), 50, 470);
+
       // Aiming
-      if (this.isDragging && !this.shooting) {
-        let dx = this.mousePos.x - this.cue.x;
-        let dy = this.mousePos.y - this.cue.y;
+      if (this.isDragging && !this.shooting && !this.isAiTurn) {
+        this.drawAiming(this.mousePos.x, this.mousePos.y);
+      }
+    },
+    drawAiming: function(mx, my) {
+        let dx = mx - this.cue.x;
+        let dy = my - this.cue.y;
         let dist = Math.hypot(dx, dy);
         let angle = Math.atan2(dy, dx);
+        let shootAngle = angle + Math.PI;
 
-        // Aiming line
+        // Raycast to find first ball hit
+        let hit = null;
+        let minDist = 1000;
+        let rayX = Math.cos(shootAngle);
+        let rayY = Math.sin(shootAngle);
+
+        for (let b of this.balls) {
+            if (b.type === 'cue') continue;
+            // Distance from point to line: |(x2-x1)(y1-y0) - (x1-x0)(y2-y1)| / distance(p1, p2)
+            // Simplified for ray from (x1, y1) with unit dir (rayX, rayY)
+            let L2 = (b.x - this.cue.x)**2 + (b.y - this.cue.y)**2;
+            let tp = (b.x - this.cue.x) * rayX + (b.y - this.cue.y) * rayY;
+            if (tp < 0) continue; // Behind ray
+            let d2 = L2 - tp**2;
+            if (d2 > (this.ballRadius * 2)**2) continue; // Miss
+
+            let t0 = tp - Math.sqrt((this.ballRadius * 2)**2 - d2);
+            if (t0 < minDist) {
+                minDist = t0;
+                hit = b;
+            }
+        }
+
+        // 1. Aiming line to impact point
+        let impactX = this.cue.x + rayX * (hit ? minDist : 300);
+        let impactY = this.cue.y + rayY * (hit ? minDist : 300);
+
         ctx.setLineDash([5, 5]);
-        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(this.cue.x, this.cue.y);
-        ctx.lineTo(this.cue.x - Math.cos(angle) * 200, this.cue.y - Math.sin(angle) * 200);
+        ctx.lineTo(impactX, impactY);
         ctx.stroke();
+
+        if (hit) {
+            // 2. Ghost Ball
+            ctx.setLineDash([]);
+            ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+            ctx.beginPath();
+            ctx.arc(impactX, impactY, this.ballRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 3. Target Ball Projection
+            let targetAngle = Math.atan2(hit.y - impactY, hit.x - impactX);
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.beginPath();
+            ctx.moveTo(hit.x, hit.y);
+            ctx.lineTo(hit.x + Math.cos(targetAngle) * 100, hit.y + Math.sin(targetAngle) * 100);
+            ctx.stroke();
+
+            // 4. Cue Ball Deflection
+            let cueDeflectAngle = targetAngle + Math.PI / 2;
+            // Check which side to deflect
+            let dot = rayX * Math.cos(cueDeflectAngle) + rayY * Math.sin(cueDeflectAngle);
+            if (dot < 0) cueDeflectAngle -= Math.PI;
+
+            ctx.beginPath();
+            ctx.moveTo(impactX, impactY);
+            ctx.lineTo(impactX + Math.cos(cueDeflectAngle) * 60, impactY + Math.sin(cueDeflectAngle) * 60);
+            ctx.stroke();
+        }
         ctx.setLineDash([]);
 
         // Cue stick
         ctx.save();
         ctx.translate(this.cue.x, this.cue.y);
         ctx.rotate(angle);
-        let power = Math.min(dist, 150);
-        ctx.fillStyle = '#d7ccc8';
-        ctx.fillRect(power + 20, -3, 200, 6);
-        ctx.fillStyle = '#3e2723';
-        ctx.fillRect(power + 150, -4, 70, 8);
+        let powerOffset = Math.min(dist, 120);
+
+        // Stick body
+        let stickGrad = ctx.createLinearGradient(powerOffset + 20, 0, powerOffset + 220, 0);
+        stickGrad.addColorStop(0, '#f5f5f5'); stickGrad.addColorStop(0.1, '#3e2723'); stickGrad.addColorStop(1, '#1a0f0f');
+        ctx.fillStyle = stickGrad;
+        ctx.fillRect(powerOffset + 20, -3, 250, 6);
         ctx.restore();
-      }
+    },
+    aiMove: function() {
+        if (!this.isAiTurn) return;
+
+        let targets = this.balls.filter(b => b.type !== 'cue');
+        if (targets.length === 0) return;
+
+        // Smarter AI: Try to find a ball it can actually sink
+        let bestShot = null;
+        let maxScore = -1000;
+
+        for (let t of targets) {
+            for (let p of this.pockets) {
+                // Angle needed to hit target towards pocket
+                let targetToPocket = Math.atan2(p.y - t.y, p.x - t.x);
+                // Position of ghost ball to achieve this
+                let gx = t.x - Math.cos(targetToPocket) * this.ballRadius * 2;
+                let gy = t.y - Math.sin(targetToPocket) * this.ballRadius * 2;
+
+                let cueToGhost = Math.atan2(gy - this.cue.y, gx - this.cue.x);
+                let dist = Math.hypot(gx - this.cue.x, gy - this.cue.y);
+
+                // Score this potential shot
+                let score = 1000 - dist; // Prefer closer shots
+
+                // Check if cue path is blocked
+                let blocked = false;
+                for (let b of this.balls) {
+                    if (b === t || b.type === 'cue') continue;
+                    let distToCueLine = Math.abs((gx-this.cue.x)*(this.cue.y-b.y) - (this.cue.x-b.x)*(gy-this.cue.y)) / dist;
+                    if (distToCueLine < this.ballRadius * 2) {
+                        let dot = (b.x-this.cue.x)*(gx-this.cue.x) + (b.y-this.cue.y)*(gy-this.cue.y);
+                        if (dot > 0 && dot < dist**2) blocked = true;
+                    }
+                }
+
+                if (blocked) score -= 500;
+                if (score > maxScore) {
+                    maxScore = score;
+                    bestShot = { angle: cueToGhost, power: Math.min(dist / 15 + 4, 12) };
+                }
+            }
+        }
+
+        // Add a bit of randomness/error
+        let error = (Math.random() - 0.5) * 0.05;
+        let finalAngle = (bestShot ? bestShot.angle : Math.atan2(targets[0].y-this.cue.y, targets[0].x-this.cue.x)) + error;
+        let finalPower = bestShot ? bestShot.power : 8;
+
+        this.cue.vx = Math.cos(finalAngle) * finalPower;
+        this.cue.vy = Math.sin(finalAngle) * finalPower;
+        this.shooting = true;
+        playSound('jump');
     },
     click: function(mx, my) {
-      if (this.shooting) return;
+      if (this.shooting || this.isAiTurn) return;
       this.isDragging = true;
       this.dragStart = {x: mx, y: my};
 
