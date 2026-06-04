@@ -36,7 +36,7 @@ var babiPos = 0;
 // ════════════════════════════════════════════════════════════
 // 
 
-const CLIENT_VERSION = "v2.0.14"; // MUST MATCH APP_VERSION IN CODE.GS!
+const CLIENT_VERSION = "v2.0.15"; // MUST MATCH APP_VERSION IN CODE.GS!
 
 // Run the 1-Hour strict check in the background
 setInterval(() => {
@@ -722,23 +722,23 @@ var Games={
       for (var i = 0; i < 144; i++) {
         var pCell = document.createElement('div');
         pCell.style.cssText = 'width:30px; height:30px; background:rgba(0,229,255,0.03); border:1px solid rgba(0,229,255,0.1); border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:14px; box-shadow:inset 0 0 5px rgba(0,229,255,0.05); transition:all 0.3s;';
-        if (this.playerGrid[i] === 1) {
-          pCell.style.background = 'rgba(0,229,255,0.2)';
-          pCell.style.borderColor = 'rgba(0,229,255,0.5)';
-          pCell.style.boxShadow = 'inset 0 0 10px rgba(0,229,255,0.2)';
+        if (this.playerGrid[i] === 1 || this.playerGrid[i] === 3) {
+          pCell.style.background = this.playerGrid[i] === 1 ? 'rgba(0,229,255,0.1)' : 'rgba(255,59,48,0.2)';
+          pCell.style.borderColor = this.playerGrid[i] === 1 ? 'rgba(0,229,255,0.4)' : '#FF3B30';
+
           var ship = this.playerShips.find(s => s.indices.includes(i));
           if (ship) {
              var type = this.shipTypes.find(t => t.name === ship.name);
-             pCell.innerHTML = `<span style="opacity:0.5; font-size:12px;">${type.icon}</span>`;
+             var iconHtml = `<span style="opacity:0.6; font-size:12px;">${type.icon}</span>`;
+             if (this.playerGrid[i] === 3) {
+               pCell.innerHTML = `<div style="position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">${iconHtml}<div style="position:absolute; font-size:18px; filter:drop-shadow(0 0 5px #000);">💥</div></div>`;
+               pCell.style.boxShadow = '0 0 15px #FF3B30, inset 0 0 10px rgba(255,59,48,0.5)';
+             } else {
+               pCell.innerHTML = iconHtml;
+             }
           }
         }
         else if (this.playerGrid[i] === 2) pCell.innerHTML = '<span style="filter:drop-shadow(0 0 5px #00E5FF);">💧</span>';
-        else if (this.playerGrid[i] === 3) {
-          pCell.style.background = 'rgba(255,59,48,0.3)';
-          pCell.innerHTML = '💥';
-          pCell.style.boxShadow = '0 0 15px #FF3B30, inset 0 0 10px rgba(255,59,48,0.5)';
-          pCell.style.borderColor = '#FF3B30';
-        }
         pGrid.appendChild(pCell);
 
         var aCell = document.createElement('div');
@@ -757,9 +757,13 @@ var Games={
         }
         else if (this.aiGrid[i] === 4) {
           aCell.style.background = 'rgba(255,215,0,0.15)';
-          aCell.innerHTML = '📡';
+          aCell.innerHTML = '🛳️';
           aCell.style.boxShadow = 'inset 0 0 8px rgba(255,215,0,0.2)';
           aCell.style.borderColor = 'rgba(255,215,0,0.3)';
+        }
+        else if (this.aiGrid[i] === 5) {
+          aCell.style.background = 'rgba(0,229,255,0.05)';
+          aCell.innerHTML = '<span style="opacity:0.3; font-size:10px;">🌊</span>';
         }
 
         if (this.state === 'playing' && this.turn === 'player' && this.aiGrid[i] < 2) {
@@ -834,7 +838,7 @@ var Games={
       return true;
     },
     playerAction: function(idx) {
-      if (this.state !== 'playing' || this.turn !== 'player') return;
+      if (this.state !== 'playing' || this.turn !== 'player' || isPaused) return;
       if (this.aiGrid[idx] === 2 || this.aiGrid[idx] === 3) return;
 
       if (this.selectedAbility) {
@@ -846,24 +850,32 @@ var Games={
 
       this.fire(idx, 'player');
     },
-    fire: function(idx, side) {
+    fire: function(idx, side, isTactical) {
       var targetGrid = side === 'player' ? this.aiGrid : this.playerGrid;
       var targetShips = side === 'player' ? this.aiShips : this.playerShips;
       var name = side === 'player' ? 'You' : 'Enemy';
 
-      if (targetGrid[idx] === 1) {
+      if (targetGrid[idx] === 1 || targetGrid[idx] === 4) {
         targetGrid[idx] = 3; // Hit
         var ship = targetShips.find(s => s.indices.includes(idx));
         ship.hits++;
         this.log(`${name} hit ${side === 'player' ? "enemy's" : "your"} ${ship.name}!`, side === 'player' ? '#FFD700' : '#FF3B30');
         playSound('crash');
-        if (side === 'player') { this.energy += 15; rawScore += 100; }
+        if (side === 'player') {
+          this.energy += 15; rawScore += 100;
+          score = Math.floor(rawScore * diffMult);
+          document.getElementById('hudScore').textContent = score;
+        }
 
         if (ship.hits === ship.indices.length) {
           ship.sunk = true;
           this.log(`Critical strike! ${name} sunk ${side === 'player' ? "enemy's" : "your"} ${ship.name}!`, '#00E5FF');
           playSound('win');
-          if (side === 'player') { this.energy += 25; rawScore += 500; }
+          if (side === 'player') {
+            this.energy += 25; rawScore += 500;
+            score = Math.floor(rawScore * diffMult);
+            document.getElementById('hudScore').textContent = score;
+          }
           if (targetShips.every(s => s.sunk)) {
             this.endGame(side === 'player');
             return;
@@ -872,7 +884,12 @@ var Games={
 
         if (side === 'ai') {
           this.aiMemory.mode = 'target';
-          this.aiMemory.hunt.push(...this.getNeighbors(idx));
+          var neighbors = this.getNeighbors(idx);
+          neighbors.forEach(n => {
+            if (this.playerGrid[n] < 2 && !this.aiMemory.hunt.includes(n)) {
+              this.aiMemory.hunt.push(n);
+            }
+          });
         }
       } else {
         targetGrid[idx] = 2; // Miss
@@ -882,8 +899,10 @@ var Games={
 
       this.renderGrids();
       if (side === 'player') {
-        this.turn = 'ai';
-        setTimeout(() => this.aiAction(), 800);
+        if (!isTactical) {
+          this.turn = 'ai';
+          setTimeout(() => this.aiAction(), 800);
+        }
       } else {
         this.turn = 'player';
       }
@@ -900,8 +919,12 @@ var Games={
             var nr = r + i, nc = c + j;
             if (nr >= 0 && nr < 12 && nc >= 0 && nc < 12) {
               var nidx = nr * 12 + nc;
-              if (this.aiGrid[nidx] === 1) { this.aiGrid[nidx] = 4; this.log('Enemy signature detected!', '#FFD700'); }
-              else if (this.aiGrid[nidx] === 0) this.aiGrid[nidx] = 4;
+              if (this.aiGrid[nidx] === 1) {
+                this.aiGrid[nidx] = 4;
+                this.log('Enemy signature detected!', '#FFD700');
+              } else if (this.aiGrid[nidx] === 0) {
+                this.aiGrid[nidx] = 5;
+              }
             }
           }
         }
@@ -923,19 +946,31 @@ var Games={
         this.log('Commencing Artillery Barrage!');
         for (var i = 0; i < 5; i++) {
           setTimeout(() => {
+            if (this.state !== 'playing') return;
             var target = Math.floor(Math.random() * 144);
             while (this.aiGrid[target] > 1) target = Math.floor(Math.random() * 144);
-            this.fire(target, 'player');
+            this.fire(target, 'player', true); // True = tactical fire, don't trigger AI turn yet
+            if (i === 4) { // Last shot of barrage
+              this.turn = 'ai';
+              setTimeout(() => this.aiAction(), 800);
+            }
           }, i * 200);
         }
       }
       this.renderGrids();
-      this.turn = 'ai';
-      setTimeout(() => this.aiAction(), 1500);
+      if (id !== 'barrage') {
+        this.turn = 'ai';
+        setTimeout(() => this.aiAction(), 1500);
+      }
     },
     aiAction: function() {
-      if (this.state !== 'playing') return;
-      var idx;
+      if (this.state !== 'playing' || isPaused) return;
+      var idx = -1;
+
+      // AI Logic based on difficulty
+      if (activeDiff === 'Easy') {
+         this.aiMemory.mode = 'random'; // Strictly random on Easy
+      }
 
       // HARD difficulty probability mapping logic (simple version: favor un-fired spots near ships)
       if (activeDiff === 'Hard' && Math.random() > 0.3 && this.aiMemory.mode === 'random') {
@@ -947,10 +982,10 @@ var Games={
          }
       }
 
-      if (this.aiMemory.mode === 'target' && this.aiMemory.hunt.length > 0) {
+      if (idx === -1 && this.aiMemory.mode === 'target' && this.aiMemory.hunt.length > 0) {
         idx = this.aiMemory.hunt.pop();
         if (this.playerGrid[idx] > 1) return this.aiAction();
-      } else {
+      } else if (idx === -1) {
         this.aiMemory.mode = 'random';
         idx = Math.floor(Math.random() * 144);
         while (this.playerGrid[idx] > 1) idx = Math.floor(Math.random() * 144);
@@ -979,6 +1014,7 @@ var Games={
       this.state = 'over';
       var bonus = win ? 2000 : 0;
       rawScore += bonus;
+      if (win) google.script.run.withSuccessHandler(r=>{if(r&&r.isNew)showToast('🎖️ Naval Commander — Achievement Unlocked!');}).saveAchievement('naval_commander');
       setTimeout(() => {
         triggerGameOver(win ? 'VICTORY! Enemy Fleet Decimated.' : 'DEFEAT. Your fleet has been sunk.');
       }, 1000);
