@@ -48,7 +48,7 @@ window.google = {
           withFailureHandler: function() {
             return {
               getWalletBalance: function() { callback({tickets: 10, unspent: 1000000, xp: 50000, perfMult: 1.0}); },
-              getLiveJackpotWithVersion: function() { callback({amount: 500000, version: 'v2.0.14'}); },
+              getLiveJackpotWithVersion: function() { callback({amount: 500000, version: 'v2.0.15'}); },
               getSessionInfo: function() { callback({ldap: 'jules', email: 'jules@example.com'}); },
               getAllPersonalBests: function() { callback({}); },
               getGlobalRankings: function() { callback([]); },
@@ -58,7 +58,7 @@ window.google = {
             };
           },
           getWalletBalance: function() { callback({tickets: 10, unspent: 1000000, xp: 50000, perfMult: 1.0}); },
-          getLiveJackpotWithVersion: function() { callback({amount: 500000, version: 'v2.0.14'}); },
+          getLiveJackpotWithVersion: function() { callback({amount: 500000, version: 'v2.0.15'}); },
           getSessionInfo: function() { callback({ldap: 'jules', email: 'jules@example.com'}); },
           getAllPersonalBests: function() { callback({}); },
           getGlobalRankings: function() { callback([]); },
