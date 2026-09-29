@@ -1,4 +1,4 @@
-const APP_VERSION = "v2.0.15"; // CHANGE THIS NUMBER EVERY TIME YOU DEPLOY AN UPDATE!
+const APP_VERSION = "v2.0.21"; // CHANGE THIS NUMBER EVERY TIME YOU DEPLOY AN UPDATE!
 const SPREADSHEET_ID = '15CCGEz8Btj4iSWb7k46XO4Bg_j-e61eNNL7uviaEO_4'; // Replace with actual ID or use getActiveSpreadsheet() if bound
 const EXCHANGE_RATE = 500000; // 500,000 points = 1 Ticket
 
@@ -136,14 +136,6 @@ function purchaseItem(itemName, ticketCost) {
 
     if (rowIndex === -1) return { success: false, message: 'Wallet not found.' };
 
-    // --- SERVER-SIDE LEVEL CHECK ---
-    let xp = Number(data[rowIndex-1][4]) || 0;
-    let playerLvl = Math.floor(Math.sqrt(xp / 1500)) + 1;
-    if (playerLvl < 999) {
-      return shadowban(user, 'Console Hack Attempt: Store purchase under Lv. 999', ticketCost);
-    }
-    // -------------------------------
-
     // Concurrency check: re-read live cell value before writing
     let liveTickets = Number(sheet.getRange(rowIndex, 2).getValue());
     if (liveTickets < ticketCost) {
@@ -262,21 +254,18 @@ function saveScore(game, diff, score, token) {
         for (let h = 0; h < expected.length; h++) {
           if (headers[h] !== expected[h]) {
             Logger.log('PersonalBests column mismatch at index ' + h + ': expected ' + expected[h] + ', got ' + headers[h]);
-            return { success: false, error: 'Sheet structure mismatch. Contact admin.' };
+            break;
           }
         }
       }
     }
 
-    if (!_checkRateLimit('saveScore_' + user, 10, 60)) {
-      return { success: false, error: 'Too many score submissions.' };
-    }
+    _checkRateLimit('saveScore_' + user, 10, 60); // logged only, no longer blocks
     const savedToken = cache.get('game_token_' + user);
     const savedGame = cache.get('active_game_' + user);
     
-    // FIX: Soft reject for Multi-Tab users instead of an instant Shadowban
     if (!token || token !== savedToken) {
-      return { success: false, error: 'Session mismatch. Please refresh your browser.' };
+      _log('WARN', 'saveScore', 'Session token mismatch (allowed)', { user: user, game: game });
     }
     
     // Clear token so it can't be reused
@@ -285,8 +274,7 @@ function saveScore(game, diff, score, token) {
     const MIN_DURATION_MS = {
       'Sudoku': 30000, 'Solitaire': 45000, 'Playdle': 15000,
       'Minesweeper': 20000, 'Tetris': 30000, '2048': 20000,
-      'Candy Run': 3000, 'Flappy Bot': 3000, // Allow quick deaths!
-      '8 Ball Pool': 10000
+      'Candy Run': 3000, 'Flappy Bot': 3000 // Allow quick deaths!
     };
     
     const startTime = parseInt(cache.get('game_start_' + user) || '0');
@@ -295,11 +283,18 @@ function saveScore(game, diff, score, token) {
     
     let finalScore = score;
     
-    // ANTI-CHEAT FIX: Only ban if they played too fast AND got a suspiciously high score
-    if (elapsed < minRequired) {
-      if (finalScore > 2000) {
-        return shadowban(user, 'Too fast with High Score: ' + game + ' in ' + elapsed + 'ms', finalScore);
-      }
+    if (elapsed < minRequired && finalScore > 2000) {
+      _log('WARN', 'saveScore', 'Fast high score (allowed)', { user: user, game: game, elapsed: elapsed, score: finalScore });
+    }
+
+    // REPLAY DETECTION: same user + game + exact score submitted within 3s twice = likely duplicate network retry or replay attempt.
+    // Flag only — never reject, since legit double-fires happen on flaky connections.
+    const dupeCache = CacheService.getUserCache();
+    const dupeKey = 'dupe_' + user + '_' + game + '_' + finalScore;
+    if (dupeCache.get(dupeKey)) {
+      _log('WARN', 'saveScore', 'Possible duplicate/replay submission (flagged, not blocked)', { user: user, game: game, score: finalScore });
+    } else {
+      dupeCache.put(dupeKey, '1', 3);
     }
 
     const MAX_SCORES = {
@@ -310,14 +305,19 @@ function saveScore(game, diff, score, token) {
       'Cyber Jump': 6000000, 'Candy Crush': 2500000, '4 Emojis 1 Word': 900000,
       'Severity 1: Core Breach': 25000000, 'Cosmic Merge': 1500000,
       'Sector 4: Containment': 450000, 'Angry Agents': 750000,
-      'Candy Run': 5000000, // ADDED CANDY RUN CAP
-      '8 Ball Pool': 250000,
-      'Battleship Command': 50000
+      'Candy Run': 5000000, 'Basketball Hoops': 800000,
+      'Darts': 12000, '8-Ball Pool': 20000
     };
-    
-    if (MAX_SCORES[game] && finalScore > MAX_SCORES[game]) {
-      return shadowban(user, 'Score ceiling exceeded: ' + game, finalScore);
+
+    // SILENT CLAMP: never reject, just cap payable score to the realistic ceiling.
+    // This is the actual anti-fraud backstop — logs the anomaly for review but
+    // still lets the player keep playing/saving without any visible penalty.
+    const scoreCeiling = MAX_SCORES[game];
+    if (scoreCeiling && finalScore > scoreCeiling) {
+      _log('WARN', 'saveScore', 'Score clamped to ceiling', { user: user, game: game, submitted: finalScore, cappedTo: scoreCeiling });
+      finalScore = scoreCeiling;
     }
+    
 
     // ss already declared above in the column map guard
     // 1. Log to History
@@ -348,6 +348,12 @@ function saveScore(game, diff, score, token) {
       }
     }
     
+    // ANOMALY CHECK: flag if this score is a huge outlier vs. the player's own prior best for this game/diff.
+    // Purely informational — payout still proceeds normally, nothing is withheld from the player.
+    if (pbRow !== -1 && currentPB > 0 && finalScore > currentPB * 5 && finalScore > 5000) {
+      _log('WARN', 'saveScore', 'Score is 5x+ prior personal best (flagged for review)', { user: user, game: game, prevPB: currentPB, newScore: finalScore });
+    }
+
     if (pbRow !== -1) {
       if (finalScore > currentPB) {
         pbSheet.getRange(pbRow, 4).setValue(finalScore);
@@ -358,6 +364,9 @@ function saveScore(game, diff, score, token) {
       pbSheet.appendRow([user, game, diff, finalScore]);
     }
     
+    // 2b. Update Monthly Bests
+    updateMonthlyBest(user, game, diff, finalScore);
+
     // 3. Process Economy & RPG Leveling
     const rewardUpdate = processGameRewards(user, finalScore, game);
     _log('INFO', 'saveScore', 'Score saved', { user: user, game: game, diff: diff, score: finalScore, isPB: isNewPB, mult: rewardUpdate.mult });
@@ -501,7 +510,11 @@ const ACHIEVEMENT_DEFS = {
   'piano_maestro': { label: '🎹 Maestro', desc: 'Reach a 100x combo in Piano Tiles.' },
   'blind_musician': { label: '🦇 Blind Musician', desc: 'Score 500+ points on Hard in Piano Tiles.' },
   'spam_boss': { label: '👹 Inbox Zero', desc: 'Defeat the Boss in Spam Defender.' },
-  'naval_commander': { label: '🎖️ Naval Commander', desc: 'Secure a victory in Battleship Command.' }
+  'bball_streak5': { label: '🏀 Nothing But Net', desc: 'Chain a 5x swish streak in Basketball Hoops.' },
+  'dart_bullseye': { label: '🎯 Bullseye!', desc: 'Hit the bullseye (50) in Darts.' },
+  'dart_180': { label: '🏆 Ton-Eighty!', desc: 'Score a perfect 180 (three triple-20s) in one round of Darts.' },
+  'pool_clear': { label: '🎱 Table Cleared', desc: 'Legally pot all 15 balls in 8-Ball Pool.' },
+  'pool_combo3': { label: '💥 Triple Shot', desc: 'Pot 3 or more balls with a single shot in 8-Ball Pool.' }
 };
 
 function saveAchievement(achId) {
@@ -835,13 +848,6 @@ function clientConvertTicket(itemName, ticketCost) {
     
     if (rowIndex === -1) return { success: false, message: 'Wallet not found.' };
 
-    // --- SERVER-SIDE LEVEL CHECK ---
-    let xp = Number(data[rowIndex-1][4]) || 0;
-    let playerLvl = Math.floor(Math.sqrt(xp / 1500)) + 1;
-    if (playerLvl < 999) {
-      return shadowban(user, 'Console Hack Attempt: Ticket minting under Lv. 999', ticketCost);
-    }
-    
     let currentTickets = Number(data[rowIndex-1][1]);
     let unspent = Number(data[rowIndex-1][2]);
     let lifetime = Number(data[rowIndex-1][3]);
@@ -951,6 +957,15 @@ function processGameRewards(user, rawScore, gameTitle) {
     // Apply Math
     let earnedPoints = Math.floor(ecoScore * finalMultiplier);
     let earnedXP = Math.floor(ecoScore * finalMultiplier);
+
+    // SANITY CAP: no single game session should mint more than 2M points/XP in one save,
+    // regardless of multipliers stacking. Silent clamp, logged for audit only.
+    const SINGLE_SESSION_CAP = 2000000;
+    if (earnedPoints > SINGLE_SESSION_CAP) {
+      _log('WARN', 'processGameRewards', 'Single-session reward clamped', { user: user, game: gameTitle, requested: earnedPoints, cappedTo: SINGLE_SESSION_CAP });
+      earnedPoints = SINGLE_SESSION_CAP;
+      earnedXP = SINGLE_SESSION_CAP;
+    }
 
     unspent += earnedPoints;
     lifetime += earnedPoints;
@@ -1711,6 +1726,87 @@ function getArcadeLeaderboard(game, filter) {
     });
   }
   
+  return ranked;
+}
+
+function _currentMonthKey() {
+  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM');
+}
+
+function updateMonthlyBest(user, game, diff, score) {
+  const ss = getSpreadsheet_();
+  let sheet = ss.getSheetByName('MonthlyBests');
+  if (!sheet) {
+    sheet = ss.insertSheet('MonthlyBests');
+    sheet.appendRow(['Month', 'User', 'Game', 'Difficulty', 'BestScore']);
+  }
+  const month = _currentMonthKey();
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === month && data[i][1] === user && data[i][2] === game && data[i][3] === diff) {
+      if (score > Number(data[i][4])) sheet.getRange(i + 1, 5).setValue(score);
+      return;
+    }
+  }
+  sheet.appendRow([month, user, game, diff, score]);
+}
+
+function getAvailableMonths(game) {
+  const ss = getSpreadsheet_();
+  const sheet = ss.getSheetByName('MonthlyBests');
+  if (!sheet) return [_currentMonthKey()];
+  const data = sheet.getDataRange().getValues();
+  const safeGame = String(game).trim();
+  const months = new Set();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][2]).trim() === safeGame) months.add(data[i][0]);
+  }
+  months.add(_currentMonthKey());
+  return Array.from(months).sort().reverse();
+}
+
+function getMonthlyLeaderboard(game, filter, monthKey) {
+  const ss = getSpreadsheet_();
+  const sheet = ss.getSheetByName('MonthlyBests');
+  if (!sheet) return [];
+
+  const data = sheet.getDataRange().getValues();
+  const currentUser = getSessionInfo().ldap;
+  const safeGame = String(game).trim();
+  const safeFilter = String(filter || 'all').toLowerCase().trim();
+  const safeMonth = monthKey || _currentMonthKey();
+
+  let bestScoresMap = {};
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() !== safeMonth) continue;
+    let rowLdap = data[i][1];
+    let rowGame = String(data[i][2]).trim();
+    let rowDiff = String(data[i][3]).trim();
+    let rowScore = Number(data[i][4]) || 0;
+    if (rowGame !== safeGame) continue;
+
+    if (safeFilter !== 'all' && safeFilter !== 'all time' && safeFilter !== 'week') {
+      let diffCheck = rowDiff.toLowerCase();
+      if (diffCheck !== safeFilter &&
+          !(safeFilter === 'standard' && diffCheck === 'medium') &&
+          !(safeFilter === 'hardcore' && diffCheck === 'hard')) {
+        continue;
+      }
+    }
+
+    let uniqueKey = rowLdap + '_' + rowDiff;
+    if (!bestScoresMap[uniqueKey] || rowScore > bestScoresMap[uniqueKey].score) {
+      bestScoresMap[uniqueKey] = { ldap: rowLdap, diff: rowDiff, score: rowScore };
+    }
+  }
+
+  let scores = Object.values(bestScoresMap);
+  scores.sort((a, b) => b.score - a.score);
+
+  let ranked = [];
+  for (let i = 0; i < Math.min(scores.length, 50); i++) {
+    ranked.push({ rank: i + 1, ldap: scores[i].ldap, diff: scores[i].diff, score: scores[i].score, isYou: scores[i].ldap === currentUser });
+  }
   return ranked;
 }
 
