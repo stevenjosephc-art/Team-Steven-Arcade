@@ -11894,7 +11894,6 @@ function submitFeedback(){
   google.script.run.withSuccessHandler(function(res){ btn.disabled=false;btn.textContent='Submit Feedback'; if(res&&res.success){document.getElementById('fbText').value='';document.getElementById('fbCharCount').textContent='0';closeModal('feedbackModal');showToast('✅ Feedback saved! Thanks!');} else showToast('❌ Error sending feedback.'); }).withFailureHandler(function(){btn.disabled=false;btn.textContent='Submit Feedback';showToast('❌ Error sending feedback.');}).saveFeedback(type,text);
 }
 
-function showToast(msg,dur){ dur=dur||3200; var tc=document.getElementById('toastContainer'), t=document.createElement('div'); t.className='toast'; t.textContent=msg; tc.appendChild(t); setTimeout(()=>{t.style.animation='none';t.style.opacity='0';t.style.transform='translateY(-8px)';t.style.transition='all 0.3s';setTimeout(()=>t.remove(),300);},dur); }
 
 var isPurchasing = false;
 // --- VVIP MODAL CONTROLLER ---
