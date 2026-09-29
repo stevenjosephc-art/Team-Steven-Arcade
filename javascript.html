@@ -4,7 +4,7 @@
 // ════════════════════════════════════════════════════════════
 var score=0, rawScore=0, isGameOver=true, isPaused=false, activeGameTitle='', activeDiff='Medium', diffMult=1.5;
 var currentPlayerLevel = 1;
-var reqAnimFrame=null, keys={}, soundEnabled=true, masterVolume=1.0, particlesEnabled=true, personalBests={}, lbFilter='all';
+var reqAnimFrame=null, keys={}, particlesEnabled=true, personalBests={}, lbFilter='all';
 var canvas=document.getElementById('gameCanvas'), ctx=canvas.getContext('2d');
 var confCanvas=document.getElementById('confettiCanvas'), confCtx=confCanvas.getContext('2d');
 var domEngine=document.getElementById('domEngine');
@@ -15,18 +15,8 @@ var drawsSinceLastPlay = 0;
 let currentCarouselIndex = 0;
 let carouselSlides = [];
 let carouselInterval;
-let currentBGM = null;
-// --- LOBBY RADIO STATION ---
-let lobbyPlaylist = [
-  "https://docs.google.com/uc?export=open&id=1GeD8SV9CHLXMxk4lk2s2VU_5ESxxOlpr", // Track 0: User Requested BGM
-  "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3", // Track 1: Upbeat Future Bass
-  "https://cdn.pixabay.com/audio/2022/10/18/audio_31c2730ebb.mp3", // Track 2: Pop Dance
-  "https://cdn.pixabay.com/audio/2022/03/23/audio_03d922bb7c.mp3"  // Track 3: Synthwave Pop
-];
-let currentLobbyTrack = Math.floor(Math.random() * lobbyPlaylist.length); // Start on a random song
-// ---------------------------
+
 let activeThemeName = 'light';
-let hasInteracted = false; // To bypass browser audio autoplay blocks
 // Work Reminder & Easter Egg State
 let sessionGamesCount = 0;
 let sessionStartTime = Date.now();
@@ -239,210 +229,6 @@ function getMomaAvatar(ldap) {
   var momaPrimary = 'https://moma-teams-photos.corp.google.com/photos/' + ldap + '?sz=600&type=PLUS';
   var momaFallback = 'https://moma-teams-photos.corp.google.com/photos/' + ldap + '?sz=600&type=SECURITY&type=SILHOUETTE';
   return '<img loading="lazy" src="' + momaPrimary + '" onerror="this.onerror=null; this.src=\'' + momaFallback + '\';" style="width:100%;height:100%;border-radius:50%;object-fit:cover;flex-shrink:0;">';
-}
-
-// --- BGM AUDIO CONTROLLER ---
-function playBGM(trackId) {
-  if (!soundEnabled || !hasInteracted) return;
-  let tracks = ['bgmLobby', 'bgmCasino', 'bgmGame'];
-  tracks.forEach(id => {
-    let audio = document.getElementById(id);
-    if (audio && id !== trackId) { audio.pause(); }
-  });
-  
-  if (trackId) {
-    let newTrack = document.getElementById(trackId);
-    if (newTrack) {
-      // If entering the lobby and no song is loaded, load the current playlist track
-      if (trackId === 'bgmLobby' && !newTrack.src) {
-         newTrack.src = lobbyPlaylist[currentLobbyTrack];
-      }
-      newTrack.volume = masterVolume * 0.25; // Keep BGM subtle!
-      newTrack.play().catch(e => console.log('Audio autoplay prevented.'));
-    }
-  }
-}
-
-// Ensure audio starts on first click anywhere
-document.addEventListener('click', () => {
-  if (!hasInteracted) {
-    hasInteracted = true;
-    playBGM(document.getElementById('casinoPage').classList.contains('active') ? 'bgmCasino' : 'bgmLobby');
-  }
-}, { once: true });
-
-
-// --- RPG EXP CONTROLLER ---
-function updateVolume(val) { 
-  masterVolume = val / 100; 
-  soundEnabled = (masterVolume > 0);
-  var sBtns = document.querySelectorAll('#soundBtn');
-  sBtns.forEach(sBtn => {
-    sBtn.textContent = soundEnabled ? '🔊' : '🔇';
-    sBtn.setAttribute('aria-label', soundEnabled ? 'Mute sound' : 'Unmute sound');
-  });
-  
-  ['bgmLobby', 'bgmCasino', 'bgmGame'].forEach(id => {
-    let audio = document.getElementById(id);
-    if (audio) audio.volume = soundEnabled ? (masterVolume * 0.25) : 0;
-  });
-  
-  localStorage.setItem('arcade_vol', val); // <--- SAVE TO STORAGE
-}
-
-function toggleSound() {
-  soundEnabled = !soundEnabled;
-  var sBtns = document.querySelectorAll('#soundBtn');
-  sBtns.forEach(sBtn => {
-    sBtn.textContent = soundEnabled ? '🔊' : '🔇';
-    sBtn.setAttribute('aria-label', soundEnabled ? 'Mute sound' : 'Unmute sound');
-  });
-  if(soundEnabled && masterVolume === 0){
-    masterVolume = 1; 
-    document.getElementById('volSlider').value = 100;
-  }
-  
-  // Instantly mute/unmute live BGM
-  ['bgmLobby', 'bgmCasino', 'bgmGame'].forEach(id => {
-    let audio = document.getElementById(id);
-    if (audio) audio.volume = soundEnabled ? (masterVolume * 0.25) : 0;
-  });
-}
-
-function toggleParticles(isEnabled) { 
-  particlesEnabled = isEnabled; 
-  localStorage.setItem('arcade_particles', isEnabled); // <--- SAVE TO STORAGE
-  
-  if (!isEnabled) {
-    if (typeof pixies !== 'undefined') pixies = [];
-    if (typeof pixieCtx !== 'undefined') pixieCtx.clearRect(0, 0, pixieCanvas.width, pixieCanvas.height);
-    if (typeof confetti !== 'undefined') confetti = [];
-    if (typeof confCtx !== 'undefined') confCtx.clearRect(0, 0, confCanvas.width, confCanvas.height);
-  }
-}
-
-function resizeConfCanvas(){ var w=canvas.parentElement; confCanvas.width=w.offsetWidth; confCanvas.height=w.offsetHeight; }
-window.addEventListener('resize',resizeConfCanvas); resizeConfCanvas();
-
-function getTierInfo(xp) {
-  let lvl = Math.floor(Math.sqrt((xp || 0) / 1500)) + 1;
-  if (lvl >= 999) return { name: 'The Singularity', cls: 'tier-diamond', badge: 'badge-diamond', icon: '👁️‍🗨️' };
-  if (lvl >= 900) return { name: 'Cyber Legend', cls: 'tier-diamond', badge: 'badge-diamond', icon: '🌌' };
-  if (lvl >= 750) return { name: 'Sector Boss', cls: 'tier-platinum', badge: 'badge-platinum', icon: '🐉' };
-  if (lvl >= 500) return { name: 'Platinum Elite', cls: 'tier-platinum', badge: 'badge-platinum', icon: '💎' };
-  if (lvl >= 300) return { name: 'Golden Champ', cls: 'tier-gold', badge: 'badge-gold', icon: '🥇' };
-  if (lvl >= 200) return { name: 'Silver Contender', cls: 'tier-silver', badge: 'badge-silver', icon: '🥈' };
-  if (lvl >= 100) return { name: 'Bronze Challenger', cls: 'tier-bronze', badge: 'badge-bronze', icon: '🥉' };
-  if (lvl >= 50)  return { name: 'Arcade Junkie', cls: 'tier-basic', badge: 'badge-basic', icon: '⚡' };
-  if (lvl >= 25)  return { name: 'Pixel Pusher', cls: 'tier-basic', badge: 'badge-basic', icon: '👾' };
-  if (lvl >= 10)  return { name: 'Button Masher', cls: 'tier-basic', badge: 'badge-basic', icon: '🕹️' };
-  return { name: 'Insert Coin', cls: '', badge: 'badge-basic', icon: '🪙' };
-}
-
-function syncJackpotAmount() {
-  google.script.run.withSuccessHandler(function(res) {
-    // 1. VERSION CHECK: If the server is newer, lock the app!
-    if (res.version && res.version !== CLIENT_VERSION) {
-       triggerForceUpdate();
-       return;
-    }
-    
-    // 2. Otherwise, update the jackpot normally
-    var amount = res.amount;
-    var ticker = document.getElementById('jackpotTickerText');
-    if(ticker) {
-      ticker.innerHTML = `🎰 WELCOME TO THE GRAND CASINO &nbsp;&nbsp; | &nbsp;&nbsp; 💎 GRAND PROGRESSIVE JACKPOT: <span class="ticker-amount">${amount.toLocaleString()}</span> PTS &nbsp;&nbsp; | &nbsp;&nbsp; PLAY HIGH-ROLLER SLOTS TO CLAIM THE POOL 💎`;
-    }
-    
-    var vipBanner = document.getElementById('vipFloorJackpot');
-    if (vipBanner) vipBanner.textContent = amount.toLocaleString();
-    
-  }).getLiveJackpotWithVersion();
-}
-// This is your heartbeat! It checks the jackpot (and version) and syncs your wallet every 60 seconds
-function arcadeHeartbeat() {
-  syncJackpotAmount();
-  refreshWalletUI();
-}
-setInterval(arcadeHeartbeat, 60000);
-
-var audioCtx;
-function getAudioCtx(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); return audioCtx; }
-function playSound(t){
-  if(!soundEnabled)return;
-  try{
-    var a=getAudioCtx(), c=a.currentTime;
-    var s={
-      jump:()=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';o.frequency.setValueAtTime(320,c);o.frequency.exponentialRampToValueAtTime(580,c+0.08);g.gain.setValueAtTime(0.12*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.15);o.start(c);o.stop(c+0.15);},
-      coin:()=>{[520,780].forEach((f,i)=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='square';o.frequency.value=f;g.gain.setValueAtTime(0.09*masterVolume,c+i*0.07);g.gain.exponentialRampToValueAtTime(0.001,c+i*0.07+0.1);o.start(c+i*0.07);o.stop(c+i*0.07+0.1);});},
-      crash:()=>{var b=a.createBuffer(1,a.sampleRate*0.3,a.sampleRate),d=b.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);var o=a.createBufferSource(),g=a.createGain();o.buffer=b;o.connect(g);g.connect(a.destination);g.gain.setValueAtTime(0.22*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.3);o.start(c);},
-      win:()=>{[400,500,640,800].forEach((f,i)=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.1*masterVolume,c+i*0.1);g.gain.exponentialRampToValueAtTime(0.001,c+i*0.1+0.15);o.start(c+i*0.1);o.stop(c+i*0.1+0.18);});},
-      pb:()=>{[300,400,500,700,900].forEach((f,i)=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.09*masterVolume,c+i*0.08);g.gain.exponentialRampToValueAtTime(0.001,c+i*0.08+0.12);o.start(c+i*0.08);o.stop(c+i*0.08+0.15);});},
-      // ── NEW POKEMON BATTLE SOUNDS ──
-      poke_fire:()=>{
-        // Crackle + rising pitch
-        var b=a.createBuffer(1,a.sampleRate*0.4,a.sampleRate),d=b.getChannelData(0);
-        for(var i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,1.5)*0.6;
-        var src=a.createBufferSource(),g=a.createGain(),f=a.createBiquadFilter();
-        src.buffer=b;f.type='bandpass';f.frequency.setValueAtTime(800,c);f.frequency.exponentialRampToValueAtTime(2200,c+0.3);
-        src.connect(f);f.connect(g);g.connect(a.destination);g.gain.setValueAtTime(0.25*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.4);src.start(c);
-      },
-      poke_water:()=>{
-        // Low whoosh + splash
-        var o=a.createOscillator(),g=a.createGain(),o2=a.createOscillator(),g2=a.createGain();
-        o.connect(g);g.connect(a.destination);o.type='sine';o.frequency.setValueAtTime(180,c);o.frequency.exponentialRampToValueAtTime(80,c+0.35);
-        g.gain.setValueAtTime(0.2*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.4);o.start(c);o.stop(c+0.4);
-        o2.connect(g2);g2.connect(a.destination);o2.type='sawtooth';o2.frequency.setValueAtTime(300,c+0.15);o2.frequency.exponentialRampToValueAtTime(100,c+0.4);
-        g2.gain.setValueAtTime(0.12*masterVolume,c+0.15);g2.gain.exponentialRampToValueAtTime(0.001,c+0.4);o2.start(c+0.15);o2.stop(c+0.4);
-      },
-      poke_electric:()=>{
-        // Rapid buzz
-        var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);
-        o.type='sawtooth';o.frequency.setValueAtTime(440,c);
-        o.frequency.setValueAtTime(880,c+0.04);o.frequency.setValueAtTime(440,c+0.08);
-        o.frequency.setValueAtTime(1200,c+0.12);o.frequency.setValueAtTime(440,c+0.16);
-        o.frequency.setValueAtTime(660,c+0.20);
-        g.gain.setValueAtTime(0.18*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.28);o.start(c);o.stop(c+0.28);
-      },
-      poke_grass:()=>{
-        // Swishing leaves — soft noise burst
-        var b=a.createBuffer(1,a.sampleRate*0.35,a.sampleRate),d=b.getChannelData(0);
-        for(var i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(Math.sin(Math.PI*i/d.length),0.5)*0.5;
-        var src=a.createBufferSource(),g=a.createGain(),f=a.createBiquadFilter();
-        src.buffer=b;f.type='highpass';f.frequency.value=1200;
-        src.connect(f);f.connect(g);g.connect(a.destination);g.gain.setValueAtTime(0.18*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.35);src.start(c);
-      },
-      poke_psychic:()=>{
-        // Eerie descending shimmer
-        [600,500,400,300,200].forEach((f,i)=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.08*masterVolume,c+i*0.06);g.gain.exponentialRampToValueAtTime(0.001,c+i*0.06+0.1);o.start(c+i*0.06);o.stop(c+i*0.06+0.12);});
-      },
-      poke_normal:()=>{
-        // Dull thud
-        var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';
-        o.frequency.setValueAtTime(220,c);o.frequency.exponentialRampToValueAtTime(80,c+0.18);
-        g.gain.setValueAtTime(0.2*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.2);o.start(c);o.stop(c+0.2);
-      },
-      poke_faint:()=>{
-        // Descending sad tone — exactly like GBA
-        [400,350,300,250,200,150].forEach((f,i)=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='square';o.frequency.value=f;g.gain.setValueAtTime(0.1*masterVolume,c+i*0.09);g.gain.exponentialRampToValueAtTime(0.001,c+i*0.09+0.1);o.start(c+i*0.09);o.stop(c+i*0.09+0.12);});
-      },
-      poke_levelup:()=>{
-        // Classic 8-note ascending jingle
-        [262,294,330,349,392,440,494,523].forEach((f,i)=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='square';o.frequency.value=f;g.gain.setValueAtTime(0.1*masterVolume,c+i*0.07);g.gain.exponentialRampToValueAtTime(0.001,c+i*0.07+0.09);o.start(c+i*0.07);o.stop(c+i*0.07+0.1);});
-      },
-      poke_super:()=>{
-        // Sharp double-hit
-        [600,900].forEach((f,i)=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='square';o.frequency.value=f;g.gain.setValueAtTime(0.18*masterVolume,c+i*0.08);g.gain.exponentialRampToValueAtTime(0.001,c+i*0.08+0.1);o.start(c+i*0.08);o.stop(c+i*0.08+0.12);});
-      },
-      poke_crit:()=>{
-        // High sharp crack
-        var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='square';
-        o.frequency.setValueAtTime(1200,c);o.frequency.exponentialRampToValueAtTime(400,c+0.15);
-        g.gain.setValueAtTime(0.22*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.18);o.start(c);o.stop(c+0.18);
-      },
-    };
-    (s[t]||s.jump)();
-  }catch(e){}
 }
 
 function toggleTheme(){var h=document.documentElement; h.setAttribute('data-theme',h.getAttribute('data-theme')==='dark'?'light':'dark');}
