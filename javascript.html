@@ -4,7 +4,7 @@
 // ════════════════════════════════════════════════════════════
 var score=0, rawScore=0, isGameOver=true, isPaused=false, activeGameTitle='', activeDiff='Medium', diffMult=1.5;
 var currentPlayerLevel = 1;
-var reqAnimFrame=null, keys={}, soundEnabled=true, masterVolume=1.0, particlesEnabled=true, personalBests={}, lbFilter='all';
+var reqAnimFrame=null, keys={}, particlesEnabled=true, personalBests={}, lbFilter='all';
 var canvas=document.getElementById('gameCanvas'), ctx=canvas.getContext('2d');
 var confCanvas=document.getElementById('confettiCanvas'), confCtx=confCanvas.getContext('2d');
 var domEngine=document.getElementById('domEngine');
@@ -17,7 +17,6 @@ let carouselSlides = [];
 let carouselInterval;
 
 let activeThemeName = 'light';
-let hasInteracted = false; // To bypass browser audio autoplay blocks
 // Work Reminder & Easter Egg State
 let sessionGamesCount = 0;
 let sessionStartTime = Date.now();
