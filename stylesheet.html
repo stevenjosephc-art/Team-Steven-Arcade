@@ -514,6 +514,7 @@
       font-size: 80px;
       position: relative;
       overflow: hidden;
+      isolation: isolate;
     }
 
     .feat-banner::after {
@@ -1247,14 +1248,16 @@
 
     /* 4. LOCKED UI ELEMENTS */
     .tab.locked {
-      opacity: 0.5;
+      opacity: 0.85;
       cursor: not-allowed;
       color: var(--text-hint) !important;
-      border-bottom-color: transparent !important;
+      background: var(--surface-2) !important;
+      border: 1px dashed var(--border-strong) !important;
     }
     .tab.locked:hover {
-      background: transparent !important;
+      background: var(--surface-2) !important;
       color: var(--text-hint) !important;
+      transform: none !important;
     }
 
     /* 5. BOUNTY CHIPS */
