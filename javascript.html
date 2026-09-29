@@ -4,7 +4,7 @@
 // ════════════════════════════════════════════════════════════
 var score=0, rawScore=0, isGameOver=true, isPaused=false, activeGameTitle='', activeDiff='Medium', diffMult=1.5;
 var currentPlayerLevel = 1;
-var reqAnimFrame=null, keys={}, soundEnabled=true, masterVolume=1.0, particlesEnabled=true, personalBests={}, lbFilter='all';
+var reqAnimFrame=null, keys={}, particlesEnabled=true, personalBests={}, lbFilter='all';
 var canvas=document.getElementById('gameCanvas'), ctx=canvas.getContext('2d');
 var confCanvas=document.getElementById('confettiCanvas'), confCtx=confCanvas.getContext('2d');
 var domEngine=document.getElementById('domEngine');
@@ -15,18 +15,8 @@ var drawsSinceLastPlay = 0;
 let currentCarouselIndex = 0;
 let carouselSlides = [];
 let carouselInterval;
-let currentBGM = null;
-// --- LOBBY RADIO STATION ---
-let lobbyPlaylist = [
-  "https://docs.google.com/uc?export=open&id=1GeD8SV9CHLXMxk4lk2s2VU_5ESxxOlpr", // Track 0: User Requested BGM
-  "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3", // Track 1: Upbeat Future Bass
-  "https://cdn.pixabay.com/audio/2022/10/18/audio_31c2730ebb.mp3", // Track 2: Pop Dance
-  "https://cdn.pixabay.com/audio/2022/03/23/audio_03d922bb7c.mp3"  // Track 3: Synthwave Pop
-];
-let currentLobbyTrack = Math.floor(Math.random() * lobbyPlaylist.length); // Start on a random song
-// ---------------------------
+
 let activeThemeName = 'light';
-let hasInteracted = false; // To bypass browser audio autoplay blocks
 // Work Reminder & Easter Egg State
 let sessionGamesCount = 0;
 let sessionStartTime = Date.now();
@@ -241,210 +231,6 @@ function getMomaAvatar(ldap) {
   return '<img loading="lazy" src="' + momaPrimary + '" onerror="this.onerror=null; this.src=\'' + momaFallback + '\';" style="width:100%;height:100%;border-radius:50%;object-fit:cover;flex-shrink:0;">';
 }
 
-// --- BGM AUDIO CONTROLLER ---
-function playBGM(trackId) {
-  if (!soundEnabled || !hasInteracted) return;
-  let tracks = ['bgmLobby', 'bgmCasino', 'bgmGame'];
-  tracks.forEach(id => {
-    let audio = document.getElementById(id);
-    if (audio && id !== trackId) { audio.pause(); }
-  });
-  
-  if (trackId) {
-    let newTrack = document.getElementById(trackId);
-    if (newTrack) {
-      // If entering the lobby and no song is loaded, load the current playlist track
-      if (trackId === 'bgmLobby' && !newTrack.src) {
-         newTrack.src = lobbyPlaylist[currentLobbyTrack];
-      }
-      newTrack.volume = masterVolume * 0.25; // Keep BGM subtle!
-      newTrack.play().catch(e => console.log('Audio autoplay prevented.'));
-    }
-  }
-}
-
-// Ensure audio starts on first click anywhere
-document.addEventListener('click', () => {
-  if (!hasInteracted) {
-    hasInteracted = true;
-    playBGM(document.getElementById('casinoPage').classList.contains('active') ? 'bgmCasino' : 'bgmLobby');
-  }
-}, { once: true });
-
-
-// --- RPG EXP CONTROLLER ---
-function updateVolume(val) { 
-  masterVolume = val / 100; 
-  soundEnabled = (masterVolume > 0);
-  var sBtns = document.querySelectorAll('#soundBtn');
-  sBtns.forEach(sBtn => {
-    sBtn.textContent = soundEnabled ? '🔊' : '🔇';
-    sBtn.setAttribute('aria-label', soundEnabled ? 'Mute sound' : 'Unmute sound');
-  });
-  
-  ['bgmLobby', 'bgmCasino', 'bgmGame'].forEach(id => {
-    let audio = document.getElementById(id);
-    if (audio) audio.volume = soundEnabled ? (masterVolume * 0.25) : 0;
-  });
-  
-  localStorage.setItem('arcade_vol', val); // <--- SAVE TO STORAGE
-}
-
-function toggleSound() {
-  soundEnabled = !soundEnabled;
-  var sBtns = document.querySelectorAll('#soundBtn');
-  sBtns.forEach(sBtn => {
-    sBtn.textContent = soundEnabled ? '🔊' : '🔇';
-    sBtn.setAttribute('aria-label', soundEnabled ? 'Mute sound' : 'Unmute sound');
-  });
-  if(soundEnabled && masterVolume === 0){
-    masterVolume = 1; 
-    document.getElementById('volSlider').value = 100;
-  }
-  
-  // Instantly mute/unmute live BGM
-  ['bgmLobby', 'bgmCasino', 'bgmGame'].forEach(id => {
-    let audio = document.getElementById(id);
-    if (audio) audio.volume = soundEnabled ? (masterVolume * 0.25) : 0;
-  });
-}
-
-function toggleParticles(isEnabled) { 
-  particlesEnabled = isEnabled; 
-  localStorage.setItem('arcade_particles', isEnabled); // <--- SAVE TO STORAGE
-  
-  if (!isEnabled) {
-    if (typeof pixies !== 'undefined') pixies = [];
-    if (typeof pixieCtx !== 'undefined') pixieCtx.clearRect(0, 0, pixieCanvas.width, pixieCanvas.height);
-    if (typeof confetti !== 'undefined') confetti = [];
-    if (typeof confCtx !== 'undefined') confCtx.clearRect(0, 0, confCanvas.width, confCanvas.height);
-  }
-}
-
-function resizeConfCanvas(){ var w=canvas.parentElement; confCanvas.width=w.offsetWidth; confCanvas.height=w.offsetHeight; }
-window.addEventListener('resize',resizeConfCanvas); resizeConfCanvas();
-
-function getTierInfo(xp) {
-  let lvl = Math.floor(Math.sqrt((xp || 0) / 1500)) + 1;
-  if (lvl >= 999) return { name: 'The Singularity', cls: 'tier-diamond', badge: 'badge-diamond', icon: '👁️‍🗨️' };
-  if (lvl >= 900) return { name: 'Cyber Legend', cls: 'tier-diamond', badge: 'badge-diamond', icon: '🌌' };
-  if (lvl >= 750) return { name: 'Sector Boss', cls: 'tier-platinum', badge: 'badge-platinum', icon: '🐉' };
-  if (lvl >= 500) return { name: 'Platinum Elite', cls: 'tier-platinum', badge: 'badge-platinum', icon: '💎' };
-  if (lvl >= 300) return { name: 'Golden Champ', cls: 'tier-gold', badge: 'badge-gold', icon: '🥇' };
-  if (lvl >= 200) return { name: 'Silver Contender', cls: 'tier-silver', badge: 'badge-silver', icon: '🥈' };
-  if (lvl >= 100) return { name: 'Bronze Challenger', cls: 'tier-bronze', badge: 'badge-bronze', icon: '🥉' };
-  if (lvl >= 50)  return { name: 'Arcade Junkie', cls: 'tier-basic', badge: 'badge-basic', icon: '⚡' };
-  if (lvl >= 25)  return { name: 'Pixel Pusher', cls: 'tier-basic', badge: 'badge-basic', icon: '👾' };
-  if (lvl >= 10)  return { name: 'Button Masher', cls: 'tier-basic', badge: 'badge-basic', icon: '🕹️' };
-  return { name: 'Insert Coin', cls: '', badge: 'badge-basic', icon: '🪙' };
-}
-
-function syncJackpotAmount() {
-  google.script.run.withSuccessHandler(function(res) {
-    // 1. VERSION CHECK: If the server is newer, lock the app!
-    if (res.version && res.version !== CLIENT_VERSION) {
-       triggerForceUpdate();
-       return;
-    }
-    
-    // 2. Otherwise, update the jackpot normally
-    var amount = res.amount;
-    var ticker = document.getElementById('jackpotTickerText');
-    if(ticker) {
-      ticker.innerHTML = `🎰 WELCOME TO THE GRAND CASINO &nbsp;&nbsp; | &nbsp;&nbsp; 💎 GRAND PROGRESSIVE JACKPOT: <span class="ticker-amount">${amount.toLocaleString()}</span> PTS &nbsp;&nbsp; | &nbsp;&nbsp; PLAY HIGH-ROLLER SLOTS TO CLAIM THE POOL 💎`;
-    }
-    
-    var vipBanner = document.getElementById('vipFloorJackpot');
-    if (vipBanner) vipBanner.textContent = amount.toLocaleString();
-    
-  }).getLiveJackpotWithVersion();
-}
-// This is your heartbeat! It checks the jackpot (and version) and syncs your wallet every 60 seconds
-function arcadeHeartbeat() {
-  syncJackpotAmount();
-  refreshWalletUI();
-}
-setInterval(arcadeHeartbeat, 60000);
-
-var audioCtx;
-function getAudioCtx(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); return audioCtx; }
-function playSound(t){
-  if(!soundEnabled)return;
-  try{
-    var a=getAudioCtx(), c=a.currentTime;
-    var s={
-      jump:()=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';o.frequency.setValueAtTime(320,c);o.frequency.exponentialRampToValueAtTime(580,c+0.08);g.gain.setValueAtTime(0.12*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.15);o.start(c);o.stop(c+0.15);},
-      coin:()=>{[520,780].forEach((f,i)=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='square';o.frequency.value=f;g.gain.setValueAtTime(0.09*masterVolume,c+i*0.07);g.gain.exponentialRampToValueAtTime(0.001,c+i*0.07+0.1);o.start(c+i*0.07);o.stop(c+i*0.07+0.1);});},
-      crash:()=>{var b=a.createBuffer(1,a.sampleRate*0.3,a.sampleRate),d=b.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);var o=a.createBufferSource(),g=a.createGain();o.buffer=b;o.connect(g);g.connect(a.destination);g.gain.setValueAtTime(0.22*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.3);o.start(c);},
-      win:()=>{[400,500,640,800].forEach((f,i)=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.1*masterVolume,c+i*0.1);g.gain.exponentialRampToValueAtTime(0.001,c+i*0.1+0.15);o.start(c+i*0.1);o.stop(c+i*0.1+0.18);});},
-      pb:()=>{[300,400,500,700,900].forEach((f,i)=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.09*masterVolume,c+i*0.08);g.gain.exponentialRampToValueAtTime(0.001,c+i*0.08+0.12);o.start(c+i*0.08);o.stop(c+i*0.08+0.15);});},
-      // ── NEW POKEMON BATTLE SOUNDS ──
-      poke_fire:()=>{
-        // Crackle + rising pitch
-        var b=a.createBuffer(1,a.sampleRate*0.4,a.sampleRate),d=b.getChannelData(0);
-        for(var i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,1.5)*0.6;
-        var src=a.createBufferSource(),g=a.createGain(),f=a.createBiquadFilter();
-        src.buffer=b;f.type='bandpass';f.frequency.setValueAtTime(800,c);f.frequency.exponentialRampToValueAtTime(2200,c+0.3);
-        src.connect(f);f.connect(g);g.connect(a.destination);g.gain.setValueAtTime(0.25*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.4);src.start(c);
-      },
-      poke_water:()=>{
-        // Low whoosh + splash
-        var o=a.createOscillator(),g=a.createGain(),o2=a.createOscillator(),g2=a.createGain();
-        o.connect(g);g.connect(a.destination);o.type='sine';o.frequency.setValueAtTime(180,c);o.frequency.exponentialRampToValueAtTime(80,c+0.35);
-        g.gain.setValueAtTime(0.2*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.4);o.start(c);o.stop(c+0.4);
-        o2.connect(g2);g2.connect(a.destination);o2.type='sawtooth';o2.frequency.setValueAtTime(300,c+0.15);o2.frequency.exponentialRampToValueAtTime(100,c+0.4);
-        g2.gain.setValueAtTime(0.12*masterVolume,c+0.15);g2.gain.exponentialRampToValueAtTime(0.001,c+0.4);o2.start(c+0.15);o2.stop(c+0.4);
-      },
-      poke_electric:()=>{
-        // Rapid buzz
-        var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);
-        o.type='sawtooth';o.frequency.setValueAtTime(440,c);
-        o.frequency.setValueAtTime(880,c+0.04);o.frequency.setValueAtTime(440,c+0.08);
-        o.frequency.setValueAtTime(1200,c+0.12);o.frequency.setValueAtTime(440,c+0.16);
-        o.frequency.setValueAtTime(660,c+0.20);
-        g.gain.setValueAtTime(0.18*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.28);o.start(c);o.stop(c+0.28);
-      },
-      poke_grass:()=>{
-        // Swishing leaves — soft noise burst
-        var b=a.createBuffer(1,a.sampleRate*0.35,a.sampleRate),d=b.getChannelData(0);
-        for(var i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(Math.sin(Math.PI*i/d.length),0.5)*0.5;
-        var src=a.createBufferSource(),g=a.createGain(),f=a.createBiquadFilter();
-        src.buffer=b;f.type='highpass';f.frequency.value=1200;
-        src.connect(f);f.connect(g);g.connect(a.destination);g.gain.setValueAtTime(0.18*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.35);src.start(c);
-      },
-      poke_psychic:()=>{
-        // Eerie descending shimmer
-        [600,500,400,300,200].forEach((f,i)=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.08*masterVolume,c+i*0.06);g.gain.exponentialRampToValueAtTime(0.001,c+i*0.06+0.1);o.start(c+i*0.06);o.stop(c+i*0.06+0.12);});
-      },
-      poke_normal:()=>{
-        // Dull thud
-        var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';
-        o.frequency.setValueAtTime(220,c);o.frequency.exponentialRampToValueAtTime(80,c+0.18);
-        g.gain.setValueAtTime(0.2*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.2);o.start(c);o.stop(c+0.2);
-      },
-      poke_faint:()=>{
-        // Descending sad tone — exactly like GBA
-        [400,350,300,250,200,150].forEach((f,i)=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='square';o.frequency.value=f;g.gain.setValueAtTime(0.1*masterVolume,c+i*0.09);g.gain.exponentialRampToValueAtTime(0.001,c+i*0.09+0.1);o.start(c+i*0.09);o.stop(c+i*0.09+0.12);});
-      },
-      poke_levelup:()=>{
-        // Classic 8-note ascending jingle
-        [262,294,330,349,392,440,494,523].forEach((f,i)=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='square';o.frequency.value=f;g.gain.setValueAtTime(0.1*masterVolume,c+i*0.07);g.gain.exponentialRampToValueAtTime(0.001,c+i*0.07+0.09);o.start(c+i*0.07);o.stop(c+i*0.07+0.1);});
-      },
-      poke_super:()=>{
-        // Sharp double-hit
-        [600,900].forEach((f,i)=>{var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='square';o.frequency.value=f;g.gain.setValueAtTime(0.18*masterVolume,c+i*0.08);g.gain.exponentialRampToValueAtTime(0.001,c+i*0.08+0.1);o.start(c+i*0.08);o.stop(c+i*0.08+0.12);});
-      },
-      poke_crit:()=>{
-        // High sharp crack
-        var o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='square';
-        o.frequency.setValueAtTime(1200,c);o.frequency.exponentialRampToValueAtTime(400,c+0.15);
-        g.gain.setValueAtTime(0.22*masterVolume,c);g.gain.exponentialRampToValueAtTime(0.001,c+0.18);o.start(c);o.stop(c+0.18);
-      },
-    };
-    (s[t]||s.jump)();
-  }catch(e){}
-}
-
 function toggleTheme(){var h=document.documentElement; h.setAttribute('data-theme',h.getAttribute('data-theme')==='dark'?'light':'dark');}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -636,7 +422,8 @@ var POKEMON_WEAKNESS = {
 var POKEDEX_MAP = {};
 POKEDEX.forEach(function(p){ POKEDEX_MAP[p.id] = p; });
 
-var Games={
+var Games = window.Games || {};
+Object.assign(Games, {
 
   'Pou': {
     cat: 'Arcade', engine: 'dom', icon: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Pou_by_Paul_Salameh.svg', dev: 'Paul Salameh Clone', rating: 5.0, installs: '500M',
@@ -10537,109 +10324,6 @@ this.buildLevel();
   click: function() {}
 },
 
-  'Flappy Bot': {
-    cat: 'Arcade', engine: 'canvas', icon: '🐦', dev: 'Pixel Wings', rating: 4.7, installs: '80K',
-    init: function() {
-      canvas.width = 700; canvas.height = 480;
-      rawScore = 0; this.over = false; this.fc = 0;
-      this.state = 'waiting';
-      this.bird = { x: 150, y: 240, vy: 0, r: 14 };
-      this.gravity = activeDiff === 'Easy' ? 0.35 : activeDiff === 'Medium' ? 0.45 : 0.55;
-      this.flapPower = -7.5;
-      this.pipes = [];
-      this.gap = activeDiff === 'Easy' ? 170 : activeDiff === 'Medium' ? 140 : 115;
-      this.speed = activeDiff === 'Easy' ? 3 : activeDiff === 'Medium' ? 4 : 5;
-      this.spawnTimer = 0;
-      this.particles = [];
-      var hint = document.getElementById('gameCanvasHint');
-      if (hint) { hint.innerHTML = 'Tap <b>SPACE</b> or <b>CLICK</b> to start and flap. Fly through the pipe gaps!'; hint.style.display = 'block'; }
-    },
-    flap: function() {
-      if (this.over) return;
-      if (this.state === 'waiting') { this.state = 'playing'; }
-      this.bird.vy = this.flapPower;
-      playSound('jump');
-      if (particlesEnabled) for(var i=0;i<4;i++) this.particles.push({x:this.bird.x-10,y:this.bird.y+10,vx:-Math.random()*2,vy:Math.random()*2,life:1,c:'#FFD700'});
-    },
-    click: function() { this.flap(); },
-    handleKey: function(k) { if (k === ' ') this.flap(); },
-    spawnPipe: function() {
-      var minY = 60, maxY = 480 - 60 - this.gap;
-      var topH = minY + Math.random() * (maxY - minY);
-      this.pipes.push({ x: 700, topH: topH, passed: false });
-    },
-    update: function() {
-      if (this.over) return;
-      if (this.state === 'waiting') {
-        this.fc++;
-        this.bird.y = 240 + Math.sin(this.fc * 0.08) * 8; // gentle idle bob
-        return;
-      }
-      this.fc++;
-      this.bird.vy += this.gravity;
-      this.bird.y += this.bird.vy;
-      if (this.bird.y - this.bird.r <= 0) { this.bird.y = this.bird.r; this.bird.vy = 0; }
-      if (this.bird.y + this.bird.r >= 480) { this.die('Crashed into the ground!'); return; }
-      this.spawnTimer--;
-      if (this.spawnTimer <= 0) { this.spawnPipe(); this.spawnTimer = Math.floor(90 - this.speed*4); }
-      var self = this;
-      this.pipes.forEach(function(p) {
-        p.x -= self.speed;
-        if (!p.passed && p.x + 30 < self.bird.x) { p.passed = true; rawScore += 10; playSound('coin'); }
-        var bx = self.bird.x, by = self.bird.y, br = self.bird.r;
-        if (bx + br > p.x && bx - br < p.x + 30) {
-          if (by - br < p.topH || by + br > p.topH + self.gap) self.die('Hit a pipe!');
-        }
-      });
-      this.pipes = this.pipes.filter(function(p) { return p.x > -40; });
-      this.particles.forEach(function(pt){ pt.x+=pt.vx; pt.y+=pt.vy; pt.life-=0.05; });
-      this.particles = this.particles.filter(function(pt){ return pt.life>0; });
-    },
-    die: function(msg) {
-      if (this.over) return;
-      this.over = true;
-      playSound('crash');
-      setTimeout(function(){ triggerGameOver(msg); }, 400);
-    },
-    draw: function() {
-      var W=700,H=480;
-      var bg = ctx.createLinearGradient(0,0,0,H);
-      bg.addColorStop(0,'#4EC0CA'); bg.addColorStop(1,'#8FE0E8');
-      ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      for (var i=0;i<3;i++) { var cx=((i*260)-(this.fc*0.3))%(W+120); ctx.beginPath(); ctx.arc(cx,80+i*40,30,0,Math.PI*2); ctx.arc(cx+30,70+i*40,36,0,Math.PI*2); ctx.arc(cx+60,80+i*40,30,0,Math.PI*2); ctx.fill(); }
-      var self = this;
-      this.pipes.forEach(function(p) {
-        ctx.fillStyle = '#4CAF50'; ctx.strokeStyle = '#2E7D32'; ctx.lineWidth = 4;
-        ctx.fillRect(p.x, 0, 30, p.topH); ctx.strokeRect(p.x, 0, 30, p.topH);
-        ctx.fillRect(p.x, p.topH+self.gap, 30, 480-(p.topH+self.gap)); ctx.strokeRect(p.x, p.topH+self.gap, 30, 480-(p.topH+self.gap));
-      });
-      this.particles.forEach(function(pt){ ctx.globalAlpha=Math.max(0,pt.life); ctx.fillStyle=pt.c; ctx.beginPath(); ctx.arc(pt.x,pt.y,3,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; });
-      ctx.save();
-      ctx.translate(this.bird.x, this.bird.y);
-      ctx.rotate(Math.max(-0.5, Math.min(1, this.bird.vy/10)));
-      ctx.fillStyle = '#FFD700'; ctx.beginPath(); ctx.arc(0,0,this.bird.r,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(6,-4,5,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(8,-4,2,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#FF9800'; ctx.beginPath(); ctx.moveTo(12,0); ctx.lineTo(22,-3); ctx.lineTo(22,3); ctx.closePath(); ctx.fill();
-      ctx.restore();
-      ctx.fillStyle = '#FFF'; ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.font='bold 36px "Google Sans"'; ctx.textAlign='center';
-      ctx.strokeText(rawScore, W/2, 60); ctx.fillText(rawScore, W/2, 60);
-
-      if (this.state === 'waiting') {
-        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0,0,W,H);
-        ctx.fillStyle = '#FFF'; ctx.font = 'bold 28px "Google Sans"';
-        ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
-        ctx.strokeText('Tap SPACE or CLICK', W/2, H/2 - 20);
-        ctx.fillText('Tap SPACE or CLICK', W/2, H/2 - 20);
-        ctx.font = 'bold 18px "Google Sans"';
-        ctx.strokeText('to start flying!', W/2, H/2 + 15);
-        ctx.fillText('to start flying!', W/2, H/2 + 15);
-      }
-      ctx.textAlign='left';
-    }
-  },
-
   'Cosmic Merge': {
     cat: 'Puzzle', engine: 'canvas', icon: 'https://hips.hearstapps.com/hmg-prod/images/watermelon-game-suika-65330724e06b4.jpg?crop=0.337xw:0.598xh;0.337xw,0.348xh&resize=1200:*', dev: 'Astro Games', rating: 4.8, installs: '2.1M',
     init: function() {
@@ -11385,7 +11069,7 @@ this.buildLevel();
       ctx.fillText('Score: '+rawScore+'   Errors: '+this.errors, 12, 590);
     }
   }
-};
+});
 // ════════════════════════════════════════════════════════════
 //  GAME ENGINE CONTROLLER & UI FUNCTIONS
 // ════════════════════════════════════════════════════════════
@@ -12108,7 +11792,6 @@ function submitFeedback(){
   google.script.run.withSuccessHandler(function(res){ btn.disabled=false;btn.textContent='Submit Feedback'; if(res&&res.success){document.getElementById('fbText').value='';document.getElementById('fbCharCount').textContent='0';closeModal('feedbackModal');showToast('✅ Feedback saved! Thanks!');} else showToast('❌ Error sending feedback.'); }).withFailureHandler(function(){btn.disabled=false;btn.textContent='Submit Feedback';showToast('❌ Error sending feedback.');}).saveFeedback(type,text);
 }
 
-function showToast(msg,dur){ dur=dur||3200; var tc=document.getElementById('toastContainer'), t=document.createElement('div'); t.className='toast'; t.textContent=msg; tc.appendChild(t); setTimeout(()=>{t.style.animation='none';t.style.opacity='0';t.style.transform='translateY(-8px)';t.style.transition='all 0.3s';setTimeout(()=>t.remove(),300);},dur); }
 
 var isPurchasing = false;
 // --- VVIP MODAL CONTROLLER ---
