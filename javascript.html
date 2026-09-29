@@ -422,7 +422,8 @@ var POKEMON_WEAKNESS = {
 var POKEDEX_MAP = {};
 POKEDEX.forEach(function(p){ POKEDEX_MAP[p.id] = p; });
 
-var Games={
+var Games = window.Games || {};
+Object.assign(Games, {
 
   'Pou': {
     cat: 'Arcade', engine: 'dom', icon: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Pou_by_Paul_Salameh.svg', dev: 'Paul Salameh Clone', rating: 5.0, installs: '500M',
@@ -10323,109 +10324,6 @@ this.buildLevel();
   click: function() {}
 },
 
-  'Flappy Bot': {
-    cat: 'Arcade', engine: 'canvas', icon: '🐦', dev: 'Pixel Wings', rating: 4.7, installs: '80K',
-    init: function() {
-      canvas.width = 700; canvas.height = 480;
-      rawScore = 0; this.over = false; this.fc = 0;
-      this.state = 'waiting';
-      this.bird = { x: 150, y: 240, vy: 0, r: 14 };
-      this.gravity = activeDiff === 'Easy' ? 0.35 : activeDiff === 'Medium' ? 0.45 : 0.55;
-      this.flapPower = -7.5;
-      this.pipes = [];
-      this.gap = activeDiff === 'Easy' ? 170 : activeDiff === 'Medium' ? 140 : 115;
-      this.speed = activeDiff === 'Easy' ? 3 : activeDiff === 'Medium' ? 4 : 5;
-      this.spawnTimer = 0;
-      this.particles = [];
-      var hint = document.getElementById('gameCanvasHint');
-      if (hint) { hint.innerHTML = 'Tap <b>SPACE</b> or <b>CLICK</b> to start and flap. Fly through the pipe gaps!'; hint.style.display = 'block'; }
-    },
-    flap: function() {
-      if (this.over) return;
-      if (this.state === 'waiting') { this.state = 'playing'; }
-      this.bird.vy = this.flapPower;
-      playSound('jump');
-      if (particlesEnabled) for(var i=0;i<4;i++) this.particles.push({x:this.bird.x-10,y:this.bird.y+10,vx:-Math.random()*2,vy:Math.random()*2,life:1,c:'#FFD700'});
-    },
-    click: function() { this.flap(); },
-    handleKey: function(k) { if (k === ' ') this.flap(); },
-    spawnPipe: function() {
-      var minY = 60, maxY = 480 - 60 - this.gap;
-      var topH = minY + Math.random() * (maxY - minY);
-      this.pipes.push({ x: 700, topH: topH, passed: false });
-    },
-    update: function() {
-      if (this.over) return;
-      if (this.state === 'waiting') {
-        this.fc++;
-        this.bird.y = 240 + Math.sin(this.fc * 0.08) * 8; // gentle idle bob
-        return;
-      }
-      this.fc++;
-      this.bird.vy += this.gravity;
-      this.bird.y += this.bird.vy;
-      if (this.bird.y - this.bird.r <= 0) { this.bird.y = this.bird.r; this.bird.vy = 0; }
-      if (this.bird.y + this.bird.r >= 480) { this.die('Crashed into the ground!'); return; }
-      this.spawnTimer--;
-      if (this.spawnTimer <= 0) { this.spawnPipe(); this.spawnTimer = Math.floor(90 - this.speed*4); }
-      var self = this;
-      this.pipes.forEach(function(p) {
-        p.x -= self.speed;
-        if (!p.passed && p.x + 30 < self.bird.x) { p.passed = true; rawScore += 10; playSound('coin'); }
-        var bx = self.bird.x, by = self.bird.y, br = self.bird.r;
-        if (bx + br > p.x && bx - br < p.x + 30) {
-          if (by - br < p.topH || by + br > p.topH + self.gap) self.die('Hit a pipe!');
-        }
-      });
-      this.pipes = this.pipes.filter(function(p) { return p.x > -40; });
-      this.particles.forEach(function(pt){ pt.x+=pt.vx; pt.y+=pt.vy; pt.life-=0.05; });
-      this.particles = this.particles.filter(function(pt){ return pt.life>0; });
-    },
-    die: function(msg) {
-      if (this.over) return;
-      this.over = true;
-      playSound('crash');
-      setTimeout(function(){ triggerGameOver(msg); }, 400);
-    },
-    draw: function() {
-      var W=700,H=480;
-      var bg = ctx.createLinearGradient(0,0,0,H);
-      bg.addColorStop(0,'#4EC0CA'); bg.addColorStop(1,'#8FE0E8');
-      ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      for (var i=0;i<3;i++) { var cx=((i*260)-(this.fc*0.3))%(W+120); ctx.beginPath(); ctx.arc(cx,80+i*40,30,0,Math.PI*2); ctx.arc(cx+30,70+i*40,36,0,Math.PI*2); ctx.arc(cx+60,80+i*40,30,0,Math.PI*2); ctx.fill(); }
-      var self = this;
-      this.pipes.forEach(function(p) {
-        ctx.fillStyle = '#4CAF50'; ctx.strokeStyle = '#2E7D32'; ctx.lineWidth = 4;
-        ctx.fillRect(p.x, 0, 30, p.topH); ctx.strokeRect(p.x, 0, 30, p.topH);
-        ctx.fillRect(p.x, p.topH+self.gap, 30, 480-(p.topH+self.gap)); ctx.strokeRect(p.x, p.topH+self.gap, 30, 480-(p.topH+self.gap));
-      });
-      this.particles.forEach(function(pt){ ctx.globalAlpha=Math.max(0,pt.life); ctx.fillStyle=pt.c; ctx.beginPath(); ctx.arc(pt.x,pt.y,3,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; });
-      ctx.save();
-      ctx.translate(this.bird.x, this.bird.y);
-      ctx.rotate(Math.max(-0.5, Math.min(1, this.bird.vy/10)));
-      ctx.fillStyle = '#FFD700'; ctx.beginPath(); ctx.arc(0,0,this.bird.r,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(6,-4,5,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(8,-4,2,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#FF9800'; ctx.beginPath(); ctx.moveTo(12,0); ctx.lineTo(22,-3); ctx.lineTo(22,3); ctx.closePath(); ctx.fill();
-      ctx.restore();
-      ctx.fillStyle = '#FFF'; ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.font='bold 36px "Google Sans"'; ctx.textAlign='center';
-      ctx.strokeText(rawScore, W/2, 60); ctx.fillText(rawScore, W/2, 60);
-
-      if (this.state === 'waiting') {
-        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0,0,W,H);
-        ctx.fillStyle = '#FFF'; ctx.font = 'bold 28px "Google Sans"';
-        ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
-        ctx.strokeText('Tap SPACE or CLICK', W/2, H/2 - 20);
-        ctx.fillText('Tap SPACE or CLICK', W/2, H/2 - 20);
-        ctx.font = 'bold 18px "Google Sans"';
-        ctx.strokeText('to start flying!', W/2, H/2 + 15);
-        ctx.fillText('to start flying!', W/2, H/2 + 15);
-      }
-      ctx.textAlign='left';
-    }
-  },
-
   'Cosmic Merge': {
     cat: 'Puzzle', engine: 'canvas', icon: 'https://hips.hearstapps.com/hmg-prod/images/watermelon-game-suika-65330724e06b4.jpg?crop=0.337xw:0.598xh;0.337xw,0.348xh&resize=1200:*', dev: 'Astro Games', rating: 4.8, installs: '2.1M',
     init: function() {
@@ -11171,7 +11069,7 @@ this.buildLevel();
       ctx.fillText('Score: '+rawScore+'   Errors: '+this.errors, 12, 590);
     }
   }
-};
+});
 // ════════════════════════════════════════════════════════════
 //  GAME ENGINE CONTROLLER & UI FUNCTIONS
 // ════════════════════════════════════════════════════════════
