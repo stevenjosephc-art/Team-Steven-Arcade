@@ -1,0 +1,478 @@
+<script>
+var Games = window.Games || {};
+Games['Cosmic Merge'] = {
+    cat: 'Puzzle', engine: 'canvas', icon: 'https://hips.hearstapps.com/hmg-prod/images/watermelon-game-suika-65330724e06b4.jpg?crop=0.337xw:0.598xh;0.337xw,0.348xh&resize=1200:*', dev: 'Astro Games', rating: 4.8, installs: '2.1M',
+    init: function() {
+      canvas.width = 960;
+      canvas.height = 640;
+      canvas.style.aspectRatio = '960/640';
+      canvas.style.maxHeight = '80vh';
+
+      var self = this;
+      if(!this.monitor) {
+         this.monitor = setInterval(() => {
+            if (activeGameTitle !== 'Cosmic Merge') {
+               canvas.style.aspectRatio = '700/480';
+               canvas.style.maxHeight = '65vh';
+               canvas.removeEventListener('mousemove', self.mouseHandler);
+               canvas.removeEventListener('touchmove', self.touchHandler);
+               canvas.removeEventListener('touchstart', self.touchHandler);
+               clearInterval(self.monitor);
+               self.monitor = null;
+               self.inputSetup = false;
+            }
+         }, 500);
+      }
+
+      rawScore = 0; this.fc = 0; this.over = false;
+      this.planets = []; this.particles = [];
+
+      this.tiers = [
+         { r: 16, c: '#E2F0CB', c2: '#C5D8A4', face: 0, pts: 2 },
+         { r: 24, c: '#F2F2F2', c2: '#D4D4D4', face: 1, pts: 4 },
+         { r: 34, c: '#FFDAC1', c2: '#EBB491', face: 2, pts: 8 },
+         { r: 46, c: '#FFB7B2', c2: '#E28E87', face: 0, pts: 16 },
+         { r: 60, c: '#FFD3B6', c2: '#E5AD89', face: 1, pts: 32 },
+         { r: 78, c: '#A0E8AF', c2: '#68C47F', face: 2, pts: 64 },
+         { r: 98, c: '#B5EAD7', c2: '#86C9B2', face: 0, pts: 128 },
+         { r: 120, c: '#C7CEEA', c2: '#9EA8D6', face: 1, pts: 256 },
+         { r: 145, c: '#FDFD96', c2: '#DED369', face: 2, pts: 512 },
+         { r: 172, c: '#FFC8A2', c2: '#D9986C', face: 0, pts: 1024 },
+         { r: 205, c: '#FF9AA2', c2: '#E06C75', face: 1, pts: 2048 }
+      ];
+
+      var diffBoxW = { Easy: 460, Medium: 400, Hard: 340 };
+      this.boxX = 280 - (diffBoxW[activeDiff] - 400) / 2;
+      this.boxY = 60;
+      this.boxW = diffBoxW[activeDiff] || 400;
+      this.boxH = 560;
+      this.redLineY = 160;
+      this.gravityMult = activeDiff === 'Hard' ? 1.25 : activeDiff === 'Easy' ? 0.85 : 1.0;
+      this.maxSpawnTier = activeDiff === 'Hard' ? 4 : 3;
+
+      this.mouseX = 480;
+      this.comboCount = 0; this.comboTimer = 0; this.bestCombo = 0;
+      this.screenShake = 0; this.dangerLevel = 0; this._warnedDanger = false;
+
+      // fix #9: next-piece queue length now scales with difficulty
+      var queueLenMap = { Easy: 3, Medium: 2, Hard: 1 };
+      this.queueLen = queueLenMap[activeDiff] || 2;
+      this.nextQueue = [];
+      for(let i = 0; i < this.queueLen; i++) this.nextQueue.push(Math.floor(Math.random() * (this.maxSpawnTier+1)));
+      this.currentDrop = Math.floor(Math.random() * (this.maxSpawnTier+1));
+      this.cooldown = 0;
+
+      if(!this.inputSetup) {
+         this.mouseHandler = function(e) {
+            let rect = canvas.getBoundingClientRect();
+            let scaleX = canvas.width / rect.width;
+            let mx = (e.clientX - rect.left) * scaleX;
+            let r = self.tiers[self.currentDrop].r;
+            self.mouseX = Math.max(self.boxX + r + 5, Math.min(self.boxX + self.boxW - r - 5, mx));
+         };
+         // fix #4: touch support for aiming on mobile/tablet
+         this.touchHandler = function(e) {
+            if(!e.touches || !e.touches[0]) return;
+            e.preventDefault();
+            let rect = canvas.getBoundingClientRect();
+            let scaleX = canvas.width / rect.width;
+            let mx = (e.touches[0].clientX - rect.left) * scaleX;
+            let r = self.tiers[self.currentDrop].r;
+            self.mouseX = Math.max(self.boxX + r + 5, Math.min(self.boxX + self.boxW - r - 5, mx));
+         };
+         canvas.addEventListener('mousemove', this.mouseHandler);
+         canvas.addEventListener('touchmove', this.touchHandler, { passive: false });
+         canvas.addEventListener('touchstart', this.touchHandler, { passive: false });
+         this.inputSetup = true;
+      }
+
+      var hint = document.getElementById('gameCanvasHint');
+      if(hint) { hint.innerHTML = '<b>MOUSE/TOUCH</b> to Aim | <b>CLICK/TAP</b> to Drop | Merge the cute planets!'; hint.style.display = 'block'; }
+    },
+
+    click: function(x, y) {
+      // fix #12: hard cap so a burst of input can never blow up the physics loop
+      if(this.cooldown <= 0 && !this.over && this.planets.length < 150) {
+         let r = this.tiers[this.currentDrop].r;
+         let dropX = Math.max(this.boxX + r + 5, Math.min(this.boxX + this.boxW - r - 5, x));
+
+         this.planets.push({
+            x: dropX, y: 70, oldX: dropX, oldY: 70,
+            tier: this.currentDrop, merged: false, age: 0, rot: 0, mergeTimer: 0
+         });
+
+         playSound('jump');
+         this.currentDrop = this.nextQueue.shift();
+         this.nextQueue.push(Math.floor(Math.random() * (this.maxSpawnTier+1)));
+         this.cooldown = 25;
+
+         // fix #3: reclamp aim for the NEW current piece's radius — otherwise the
+         // preview ball can render outside the box until the mouse/finger moves again
+         let newR = this.tiers[this.currentDrop].r;
+         this.mouseX = Math.max(this.boxX + newR + 5, Math.min(this.boxX + this.boxW - newR - 5, dropX));
+      }
+    },
+
+    handleKey: function(k) {
+      if((k === ' ' || k === 'ArrowDown') && this.cooldown <= 0 && !this.over) {
+         this.click(this.mouseX, 0);
+      }
+      // fix #10: left/right arrow aiming for keyboard-only play
+      if((k === 'ArrowLeft' || k === 'ArrowRight') && !this.over) {
+         let r = this.tiers[this.currentDrop].r;
+         let step = (k === 'ArrowLeft') ? -20 : 20;
+         this.mouseX = Math.max(this.boxX + r + 5, Math.min(this.boxX + this.boxW - r - 5, this.mouseX + step));
+      }
+    },
+
+    update: function() {
+      if(this.over) return;
+      this.fc++;
+      if(this.cooldown > 0) this.cooldown--;
+
+      let mergesThisFrame = [];
+      let subSteps = 10;
+      let dt = 1 / subSteps;
+      let gravity = 0.6;
+
+      for(let step = 0; step < subSteps; step++) {
+         this.planets.forEach(p => {
+            if(!p.merged) {
+               let vx = (p.x - p.oldX) * 0.985;
+               let vy = (p.y - p.oldY) * 0.985;
+               p.oldX = p.x; p.oldY = p.y;
+               p.x += vx;
+               p.y += vy + (gravity * this.gravityMult * dt);
+               p.rot += (vx * 0.05);
+            }
+         });
+
+         this.planets.forEach(p => {
+            if(p.merged) return;
+            let r = this.tiers[p.tier].r;
+
+            if(p.y > this.boxY + this.boxH - r - 5) {
+               p.y = this.boxY + this.boxH - r - 5;
+               p.oldY = p.y + (p.oldY - p.y) * 0.3;
+               p.oldX = p.x + (p.oldX - p.x) * 0.75;
+            }
+            if(p.x < this.boxX + r + 5) {
+               p.x = this.boxX + r + 5; p.oldX = p.x + (p.oldX - p.x) * 0.4;
+            }
+            if(p.x > this.boxX + this.boxW - r - 5) {
+               p.x = this.boxX + this.boxW - r - 5; p.oldX = p.x + (p.oldX - p.x) * 0.4;
+            }
+         });
+
+         for(let i = 0; i < this.planets.length; i++) {
+            for(let j = i + 1; j < this.planets.length; j++) {
+               let p1 = this.planets[i], p2 = this.planets[j];
+               if(p1.merged || p2.merged) continue;
+
+               let dx = p1.x - p2.x; let dy = p1.y - p2.y;
+               let dist = Math.hypot(dx, dy);
+               let r1 = this.tiers[p1.tier].r, r2 = this.tiers[p2.tier].r;
+               let minDist = r1 + r2;
+
+               if(dist < minDist) {
+                  if(p1.tier === p2.tier && p1.tier < 10) {
+                     p1.merged = true; p2.merged = true;
+                     mergesThisFrame.push({ x: (p1.x + p2.x)/2, y: (p1.y + p2.y)/2, tier: p1.tier + 1 });
+                  } else {
+                     let overlap = minDist - dist;
+                     let nx = dx / dist, ny = dy / dist;
+                     let m1 = r1 * r1, m2 = r2 * r2;
+                     let totalM = m1 + m2;
+                     let ratio1 = m2 / totalM, ratio2 = m1 / totalM;
+
+                     p1.x += nx * overlap * ratio1; p1.y += ny * overlap * ratio1;
+                     p2.x -= nx * overlap * ratio2; p2.y -= ny * overlap * ratio2;
+                  }
+               }
+            }
+         }
+      }
+
+      if(mergesThisFrame.length > 0) {
+         this.comboTimer = 40;
+         this.comboCount++;
+         if(this.comboCount > this.bestCombo) this.bestCombo = this.comboCount;
+      }
+      let comboMult = 1 + Math.min(this.comboCount - 1, 8) * 0.15;
+
+      mergesThisFrame.forEach(m => {
+         playSound('pb', 0.85 + m.tier * 0.04); // fix #8: pitch varies by tier (extra arg is harmless if playSound ignores it)
+         let earned = Math.round(this.tiers[m.tier].pts * comboMult);
+         rawScore += earned;
+         this.planets.push({ x: m.x, y: m.y, oldX: m.x, oldY: m.y - 2, tier: m.tier, merged: false, age: 0, rot: 0, mergeTimer: 45 });
+         if(comboMult > 1) this.particles.push({ x: m.x, y: m.y - 30, vx: 0, vy: -1.5, life: 1.2, e: comboMult.toFixed(1)+'x', rot: 0, rotV: 0 });
+
+         // fix #6: shake now scales with tier instead of a hard cutoff at tier >= 6
+         this.screenShake = Math.max(this.screenShake, Math.min(2 + m.tier * 1.2, 14));
+
+         // fix #5: celebration when the top tier is created (two max tiers can never merge further)
+         if(m.tier === 10) {
+            this.screenShake = 14;
+            this.particles.push({ x: m.x, y: m.y - 50, vx: 0, vy: -1, life: 1.8, e: '★ MAX! ★', rot: 0, rotV: 0 });
+            for(let i = 0; i < 16; i++) {
+               let angle = Math.random() * Math.PI * 2;
+               let speed = Math.random() * 5 + 3;
+               this.particles.push({ x: m.x, y: m.y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, life: 1.4, e: '🌟', rot: 0, rotV: (Math.random()-0.5)*0.3 });
+            }
+         }
+
+         if(particlesEnabled) {
+            let emojis = ['✨', '⭐', '💖', '✨'];
+            for(let i=0; i<8; i++) {
+               let angle = Math.random() * Math.PI * 2;
+               let speed = Math.random() * 4 + 2;
+               this.particles.push({
+                  x: m.x, y: m.y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed,
+                  life: 1.0, e: emojis[Math.floor(Math.random()*emojis.length)], rot: Math.random()*Math.PI*2, rotV: (Math.random()-0.5)*0.2
+               });
+            }
+         }
+      });
+
+      this.planets = this.planets.filter(p => !p.merged);
+
+      if(this.comboTimer > 0) { this.comboTimer--; if(this.comboTimer <= 0) this.comboCount = 0; }
+      if(this.screenShake > 0) this.screenShake--;
+
+      this.particles.forEach((p, i) => {
+         p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.rot += p.rotV; p.life -= 0.02;
+         if(p.life <= 0) this.particles.splice(i, 1);
+      });
+
+      this.planets.forEach(p => {
+         p.age = (p.age || 0) + 1;
+         if (p.mergeTimer > 0) p.mergeTimer--;
+      });
+
+      this.planets.forEach(p => {
+         let topEdge = p.y - this.tiers[p.tier].r;
+         let isAboveLine = topEdge < this.redLineY;
+         let isSettled = Math.abs(p.y - p.oldY) < 0.5 && Math.abs(p.x - p.oldX) < 0.5;
+
+         if (isAboveLine && isSettled && p.age > 90) {
+            p.dangerTimer = (p.dangerTimer || 0) + 1;
+         } else {
+            p.dangerTimer = 0;
+         }
+      });
+
+      let maxDanger = Math.max(0, ...this.planets.map(p => p.dangerTimer || 0));
+      if(maxDanger === 45 && !this._warnedDanger) { playSound('crash'); this._warnedDanger = true; }
+      if(maxDanger < 30) this._warnedDanger = false;
+      this.dangerLevel = maxDanger / 90;
+
+      if(!this.over && maxDanger >= 90) {
+         this.over = true;
+         playSound('crash');
+         triggerGameOver('Box Overflow! Best Combo: x' + this.bestCombo);
+      }
+    },
+
+    drawKawaiiFace: function(cx, cy, r, style, rot, isExcited) {
+       ctx.save();
+       ctx.translate(cx, cy);
+       ctx.rotate(rot);
+
+       let eyeOff = r * 0.35;
+       let eyeSize = Math.max(2, r * 0.12);
+
+       ctx.fillStyle = 'rgba(255, 100, 100, 0.4)';
+       ctx.beginPath(); ctx.arc(-eyeOff * 1.3, eyeOff * 0.2, eyeSize * 1.5, 0, Math.PI*2); ctx.fill();
+       ctx.beginPath(); ctx.arc(eyeOff * 1.3, eyeOff * 0.2, eyeSize * 1.5, 0, Math.PI*2); ctx.fill();
+
+       ctx.strokeStyle = '#4A3B32'; ctx.fillStyle = '#4A3B32';
+       ctx.lineWidth = Math.max(1.5, r * 0.05);
+       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+       if (isExcited) {
+           ctx.beginPath();
+           ctx.moveTo(-eyeOff - eyeSize, -eyeOff*0.3); ctx.lineTo(-eyeOff, -eyeOff*0.1); ctx.lineTo(-eyeOff - eyeSize, eyeOff*0.1);
+           ctx.moveTo(eyeOff + eyeSize, -eyeOff*0.3); ctx.lineTo(eyeOff, -eyeOff*0.1); ctx.lineTo(eyeOff + eyeSize, eyeOff*0.1);
+           ctx.stroke();
+
+           ctx.beginPath();
+           ctx.arc(0, eyeOff * 0.4, eyeSize, 0, Math.PI);
+           ctx.closePath();
+           ctx.fill();
+       } else {
+           ctx.beginPath(); ctx.arc(-eyeOff, -eyeOff * 0.1, eyeSize, 0, Math.PI*2); ctx.fill();
+           ctx.beginPath(); ctx.arc(eyeOff, -eyeOff * 0.1, eyeSize, 0, Math.PI*2); ctx.fill();
+
+           ctx.fillStyle = '#FFF';
+           ctx.beginPath(); ctx.arc(-eyeOff + eyeSize*0.3, -eyeOff * 0.1 - eyeSize*0.3, eyeSize*0.4, 0, Math.PI*2); ctx.fill();
+           ctx.beginPath(); ctx.arc(eyeOff + eyeSize*0.3, -eyeOff * 0.1 - eyeSize*0.3, eyeSize*0.4, 0, Math.PI*2); ctx.fill();
+
+           ctx.beginPath();
+           if (style === 0) {
+               ctx.moveTo(-eyeOff * 0.4, eyeOff * 0.3);
+               ctx.quadraticCurveTo(-eyeOff * 0.2, eyeOff * 0.7, 0, eyeOff * 0.4);
+               ctx.quadraticCurveTo(eyeOff * 0.2, eyeOff * 0.7, eyeOff * 0.4, eyeOff * 0.3);
+           } else if (style === 1) {
+               ctx.arc(0, eyeOff * 0.4, eyeSize * 0.8, 0, Math.PI*2);
+           } else {
+               ctx.moveTo(-eyeOff * 0.4, eyeOff * 0.2);
+               ctx.quadraticCurveTo(0, eyeOff * 0.8, eyeOff * 0.4, eyeOff * 0.2);
+           }
+           ctx.stroke();
+       }
+       ctx.restore();
+    },
+
+    draw: function() {
+      var W = 960, H = 640;
+      ctx.save();
+      if(this.screenShake > 0) ctx.translate((Math.random()-0.5)*this.screenShake, (Math.random()-0.5)*this.screenShake);
+
+      var bg = ctx.createLinearGradient(0,0,0,H);
+      bg.addColorStop(0, '#FFE8D6');
+      bg.addColorStop(0.6, '#FFD3B6');
+      bg.addColorStop(0.6, '#E4C59E');
+      bg.addColorStop(1, '#CBA87C');
+      ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+
+      // fix #1: box tint reacts to dangerLevel (was computed but never used)
+      let dz = this.dangerLevel || 0;
+      ctx.fillStyle = dz > 0 ? `rgba(255, ${Math.round(255 - 90*dz)}, ${Math.round(255 - 150*dz)}, ${(0.45 + 0.25*dz).toFixed(2)})` : 'rgba(255, 255, 255, 0.45)';
+      ctx.fillRect(this.boxX, this.boxY, this.boxW, this.boxH);
+
+      ctx.strokeStyle = dz > 0.3 ? `rgba(224, ${Math.round(90 - 60*dz)}, ${Math.round(90 - 60*dz)}, 1)` : '#D9B48F';
+      ctx.lineWidth = 12; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(this.boxX, this.boxY);
+      ctx.lineTo(this.boxX, this.boxY + this.boxH);
+      ctx.lineTo(this.boxX + this.boxW, this.boxY + this.boxH);
+      ctx.lineTo(this.boxX + this.boxW, this.boxY);
+      ctx.stroke();
+
+      // fix #2: actually render the danger line (logic already tracked it, never drawn)
+      ctx.save();
+      ctx.strokeStyle = `rgba(255, 70, 70, ${(0.3 + 0.6*dz).toFixed(2)})`;
+      ctx.lineWidth = 3 + dz * 3;
+      ctx.setLineDash([12, 8]);
+      ctx.beginPath();
+      ctx.moveTo(this.boxX, this.redLineY);
+      ctx.lineTo(this.boxX + this.boxW, this.redLineY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // fix #9: NEXT panel height now adapts to queue length
+      let panelH = 60 + this.queueLen * 80;
+      ctx.fillStyle = '#FFF';
+      ctx.shadowBlur = 10; ctx.shadowColor = 'rgba(0,0,0,0.1)';
+      ctx.beginPath(); ctx.roundRect(this.boxX + this.boxW + 40, this.boxY, 110, panelH, 24); ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = '#A88D73'; ctx.font = 'bold 16px "Google Sans"'; ctx.textAlign = 'center';
+      ctx.fillText('NEXT', this.boxX + this.boxW + 95, this.boxY + 28);
+
+      let nx = this.boxX + this.boxW + 95;
+      this.nextQueue.forEach((tierIdx, qi) => {
+         let nextT = this.tiers[tierIdx];
+         let ny = this.boxY + 75 + qi * 80;
+         let nr = nextT.r * (qi === 0 ? 0.6 : 0.42);
+         ctx.globalAlpha = qi === 0 ? 1.0 : 0.6;
+         ctx.fillStyle = nextT.c; ctx.beginPath(); ctx.arc(nx, ny, nr, 0, Math.PI*2); ctx.fill();
+         this.drawKawaiiFace(nx, ny, nr, nextT.face, 0, false);
+         ctx.globalAlpha = 1.0;
+      });
+
+      this.planets.forEach(p => {
+         let t = this.tiers[p.tier];
+
+         let scale = p.age < 15 ? 0.5 + (p.age/15)*0.6 : 1.0;
+         if(p.age >= 15 && p.age < 25) scale = 1.1 - ((p.age-15)/10)*0.1;
+
+         let drawR = t.r * scale;
+
+         if (p.tier === 8) {
+            ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot + 0.4);
+            ctx.strokeStyle = '#F2DF80'; ctx.lineWidth = drawR * 0.2;
+            ctx.beginPath(); ctx.ellipse(0, 0, drawR * 1.6, drawR * 0.4, 0, Math.PI, Math.PI*2); ctx.stroke();
+            ctx.restore();
+         }
+
+         ctx.fillStyle = t.c;
+         ctx.beginPath(); ctx.arc(p.x, p.y, drawR, 0, Math.PI*2); ctx.fill();
+
+         ctx.save();
+         ctx.beginPath(); ctx.arc(p.x, p.y, drawR, 0, Math.PI*2); ctx.clip();
+         ctx.fillStyle = t.c2;
+         ctx.beginPath(); ctx.arc(p.x + drawR*0.3, p.y + drawR*0.3, drawR, 0, Math.PI*2);
+         ctx.arc(p.x, p.y, drawR*2, 0, Math.PI*2, true); ctx.fill();
+
+         ctx.fillStyle = 'rgba(255,255,255,0.4)';
+         ctx.beginPath(); ctx.ellipse(p.x - drawR*0.4, p.y - drawR*0.4, drawR*0.3, drawR*0.15, -0.6, 0, Math.PI*2); ctx.fill();
+         ctx.restore();
+
+         if (p.tier === 8) {
+            ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot + 0.4);
+            ctx.strokeStyle = '#F2DF80'; ctx.lineWidth = drawR * 0.2;
+            ctx.beginPath(); ctx.ellipse(0, 0, drawR * 1.6, drawR * 0.4, 0, 0, Math.PI); ctx.stroke();
+            ctx.restore();
+         }
+
+         this.drawKawaiiFace(p.x, p.y, drawR, t.face, p.rot, p.mergeTimer > 0);
+      });
+
+      this.particles.forEach(p => {
+         ctx.save();
+         ctx.translate(p.x, p.y);
+         ctx.rotate(p.rot);
+         ctx.globalAlpha = p.life;
+         ctx.font = '24px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+         ctx.fillText(p.e, 0, 0);
+         ctx.restore();
+      });
+      ctx.globalAlpha = 1.0;
+
+      if(!this.over) {
+         let currT = this.tiers[this.currentDrop];
+
+         let bobY = Math.sin(this.fc * 0.08) * 8;
+         let dropY = 40 + bobY;
+
+         ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2; ctx.setLineDash([10, 10]);
+         ctx.beginPath(); ctx.moveTo(this.mouseX, dropY + 20); ctx.lineTo(this.mouseX, this.boxY + this.boxH - 5); ctx.stroke();
+         ctx.setLineDash([]);
+
+         ctx.globalAlpha = this.cooldown > 0 ? 0.3 : 1.0;
+         ctx.fillStyle = currT.c; ctx.beginPath(); ctx.arc(this.mouseX, dropY + 35 + currT.r, currT.r, 0, Math.PI*2); ctx.fill();
+         this.drawKawaiiFace(this.mouseX, dropY + 35 + currT.r, currT.r, currT.face, 0, false);
+         ctx.globalAlpha = 1.0;
+
+         ctx.fillStyle = '#FFF';
+         ctx.shadowBlur = 10; ctx.shadowColor = 'rgba(0,0,0,0.1)';
+         ctx.beginPath();
+         ctx.arc(this.mouseX - 25, dropY + 10, 20, 0, Math.PI*2);
+         ctx.arc(this.mouseX, dropY, 28, 0, Math.PI*2);
+         ctx.arc(this.mouseX + 25, dropY + 10, 20, 0, Math.PI*2);
+         ctx.fill(); ctx.shadowBlur = 0;
+
+         this.drawKawaiiFace(this.mouseX, dropY + 5, 20, 2, 0, false);
+      }
+
+      ctx.fillStyle = '#5A4632';
+      ctx.font = 'bold 22px "Google Sans"';
+      ctx.textAlign = 'left';
+      ctx.shadowBlur = 4; ctx.shadowColor = 'rgba(255,255,255,0.6)';
+      ctx.fillText('Score: ' + rawScore, this.boxX, 40);
+      ctx.shadowBlur = 0;
+
+      if(this.comboCount > 1) {
+         ctx.fillStyle = '#FF6B6B'; ctx.font = 'bold 18px "Google Sans"';
+         ctx.fillText('Combo x' + this.comboCount, this.boxX, 66);
+         // fix #7: visual countdown of how long the combo window has left
+         let barW = 90 * Math.max(0, this.comboTimer / 40);
+         ctx.fillStyle = 'rgba(255,107,107,0.3)'; ctx.fillRect(this.boxX, 72, 90, 6);
+         ctx.fillStyle = '#FF6B6B'; ctx.fillRect(this.boxX, 72, barW, 6);
+      }
+      ctx.restore();
+    }
+  };
+</script>

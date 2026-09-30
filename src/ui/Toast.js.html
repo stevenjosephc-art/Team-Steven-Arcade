@@ -1,0 +1,18 @@
+<script>
+function showToast(msg,dur){
+  dur=dur||3200;
+  var tc=document.getElementById('toastContainer'),
+      t=document.createElement('div');
+  t.className='toast';
+  t.textContent=msg;
+  tc.appendChild(t);
+
+  setTimeout(()=>{
+    t.style.animation='none';
+    t.style.opacity='0';
+    t.style.transform='translateY(-8px)';
+    t.style.transition='all 0.3s';
+    setTimeout(()=>t.remove(),300);
+  },dur);
+}
+</script>
